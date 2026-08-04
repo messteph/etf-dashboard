@@ -98,8 +98,8 @@
       renderTrend('chart-g-trend', stats, C.growth, '成长ETF (159259) 走势', 'gClose');
       renderTrend('chart-v-trend', stats, C.value, '价值ETF (159263) 走势', 'vClose');
       renderCompare('chart-compare', stats);
-      renderDrawdown('chart-g-dd', stats, C.dd, '成长ETF (159259) 最大回撤走势', stats.gMinDD, stats.gMinDate);
-      renderDrawdown('chart-v-dd', stats, C.dd, '价值ETF (159263) 最大回撤走势', stats.vMinDD, stats.vMinDate);
+      renderDrawdown('chart-g-dd', stats, C.dd, '成长ETF (159259) 最大回撤走势', stats.gMinDD, stats.gMinDate, 'gDD');
+      renderDrawdown('chart-v-dd', stats, C.dd, '价值ETF (159263) 最大回撤走势', stats.vMinDD, stats.vMinDate, 'vDD');
       renderCompareDD('chart-compare-dd', stats);
       renderRebalance('chart-rebal', rebal);
       updateStats(stats, rebal);

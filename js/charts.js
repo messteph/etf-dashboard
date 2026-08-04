@@ -19,8 +19,8 @@ function baseTooltip(extra) {
     borderColor: '#e2e8f0', textStyle: { color: C.txt, fontSize: 12 },
     axisPointer: { type: 'cross', lineStyle: { color: '#cbd5e1' } } }, extra || {});
 }
-function dateAxis() {
-  return { type: 'category', data: [], axisLine: { lineStyle: { color: C.grid } },
+function dateAxis(dates) {
+  return { type: 'category', data: dates || [], axisLine: { lineStyle: { color: C.grid } },
     axisLabel: { color: C.sub, fontSize: 10 }, axisTick: { show: false } };
 }
 function valAxis(formatter) {
@@ -46,7 +46,7 @@ function renderTrend(elId, s, color, title, closeKey) {
     tooltip: baseTooltip({ valueFormatter: (v) => (v == null ? '-' : v.toFixed(3) + ' 元') }),
     legend: { right: 8, top: 6, textStyle: { color: C.sub, fontSize: 11 } },
     grid: baseGrid(),
-    xAxis: dateAxis(),
+    xAxis: dateAxis(dates),
     yAxis: valAxis((v) => v.toFixed(2)),
     series: [
       { name: '收盘价', type: 'line', data: closes, smooth: true, showSymbol: false,
@@ -71,7 +71,7 @@ function renderCompare(elId, s) {
     tooltip: baseTooltip({ valueFormatter: (v) => (v == null ? '-' : v.toFixed(2)) }),
     legend: { right: 8, top: 6, textStyle: { color: C.sub, fontSize: 11 } },
     grid: baseGrid(),
-    xAxis: dateAxis(),
+    xAxis: dateAxis(s.dates),
     yAxis: valAxis((v) => v.toFixed(0)),
     series: [
       { name: '成长ETF (159259)', type: 'line', data: s.gNorm, smooth: true, showSymbol: false,
@@ -85,10 +85,10 @@ function renderCompare(elId, s) {
 }
 
 /* ---------- 最大回撤图 ---------- */
-function renderDrawdown(elId, s, color, title, minDD, minDate) {
+function renderDrawdown(elId, s, color, title, minDD, minDate, ddKey) {
   const chart = mkChart(elId);
   if (!chart) return;
-  const ddData = (elId.includes('growth')) ? s.gDD : s.vDD;
+  const ddData = s[ddKey];
   const dates = s.dates;
   const series = [
     { name: '回撤', type: 'line', data: ddData, smooth: true, showSymbol: false,
@@ -104,7 +104,7 @@ function renderDrawdown(elId, s, color, title, minDD, minDate) {
       textStyle: { fontSize: 14, fontWeight: 'bold', color: C.txt } },
     tooltip: baseTooltip({ valueFormatter: (v) => (v == null ? '-' : v.toFixed(2) + '%') }),
     grid: baseGrid(),
-    xAxis: dateAxis(),
+    xAxis: dateAxis(dates),
     yAxis: valAxis((v) => v + '%'),
     series: series,
   });
@@ -122,7 +122,7 @@ function renderCompareDD(elId, s) {
     tooltip: baseTooltip({ valueFormatter: (v) => (v == null ? '-' : v.toFixed(2) + '%') }),
     legend: { right: 8, top: 6, textStyle: { color: C.sub, fontSize: 11 } },
     grid: baseGrid(),
-    xAxis: dateAxis(),
+    xAxis: dateAxis(s.dates),
     yAxis: valAxis((v) => v + '%'),
     series: [
       { name: '成长ETF 回撤', type: 'line', data: s.gDD, smooth: true, showSymbol: false,
@@ -149,7 +149,7 @@ function renderRebalance(elId, r) {
     tooltip: baseTooltip({ valueFormatter: (v) => (v == null ? '-' : v.toFixed(2) + '%') }),
     legend: { right: 8, top: 6, textStyle: { color: C.sub, fontSize: 11 } },
     grid: baseGrid(),
-    xAxis: dateAxis(),
+    xAxis: dateAxis(r.dates),
     yAxis: valAxis((v) => v + '%'),
     series: [
       { name: '50/50 定期再平衡', type: 'line', data: r.portRet, smooth: true, showSymbol: false,
