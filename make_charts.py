@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""生成成长ETF(159259) 与 价值ETF(159263) 过去6个月走势图 + 最大回撤图"""
+"""生成成长ETF(159259) 与 价值ETF(159263) 走势图 + 最大回撤图 (起始 2025-09-01)"""
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -12,17 +12,10 @@ import matplotlib.dates as mdates
 from matplotlib.ticker import FuncFormatter
 import os
 
+from chart_common import setup_font, load
+
 # ---------- 全局样式 ----------
-from matplotlib import font_manager as _fm
-for _f in ['/System/Library/Fonts/Hiragino Sans GB.ttc', '/System/Library/Fonts/PingFang.ttc']:
-    try:
-        _fm.fontManager.addfont(_f)
-    except Exception:
-        pass
-plt.rcParams['font.family'] = ['Hiragino Sans GB', 'PingFang HK', 'Heiti TC', 'Arial Unicode MS']
-plt.rcParams['axes.unicode_minus'] = False
-plt.rcParams['figure.dpi'] = 150
-plt.rcParams['savefig.dpi'] = 150
+setup_font()
 
 # 配色（浅色专业风）
 BG      = '#ffffff'
@@ -37,12 +30,6 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets')
 os.makedirs(OUT, exist_ok=True)
 
 # ---------- 读取数据 ----------
-def load(code):
-    df = pd.read_csv(f'/tmp/etf_{code}.csv')
-    df['日期'] = pd.to_datetime(df['日期'])
-    df = df.sort_values('日期').reset_index(drop=True)
-    return df
-
 g = load('159259')   # 成长
 v = load('159263')   # 价值
 

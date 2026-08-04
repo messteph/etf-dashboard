@@ -13,19 +13,12 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.ticker import FuncFormatter
-from matplotlib import font_manager as _fm
 import os
 
+from chart_common import setup_font, load
+
 # ---------- 字体 ----------
-for _f in ['/System/Library/Fonts/Hiragino Sans GB.ttc', '/System/Library/Fonts/PingFang.ttc']:
-    try:
-        _fm.fontManager.addfont(_f)
-    except Exception:
-        pass
-plt.rcParams['font.family'] = ['Hiragino Sans GB', 'PingFang HK', 'Heiti TC', 'Arial Unicode MS']
-plt.rcParams['axes.unicode_minus'] = False
-plt.rcParams['figure.dpi'] = 150
-plt.rcParams['savefig.dpi'] = 150
+setup_font()
 
 BG      = '#ffffff'
 GRID    = '#e8ecf1'
@@ -39,11 +32,6 @@ BHOLD   = '#94a3b8'   # 买入持有对比: 灰
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets')
 
 # ---------- 数据 ----------
-def load(code):
-    df = pd.read_csv(f'/tmp/etf_{code}.csv')
-    df['日期'] = pd.to_datetime(df['日期'])
-    return df.sort_values('日期').reset_index(drop=True)
-
 g = load('159259')
 v = load('159263')
 

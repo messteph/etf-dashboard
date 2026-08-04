@@ -1,0 +1,52 @@
+name: Daily Data Update
+
+# 每天北京时间 16:00 更新 (UTC 08:00)
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:  # 支持手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install CJK fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+
+      - name: Install dependencies
+        run: |
+          pip install --quiet akshare matplotlib pandas
+
+      - name: Fetch latest data
+        run: python fetch_data.py
+
+      - name: Generate charts
+        run: |
+          python make_charts.py
+          python make_rebalance.py
+          python update_html.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: daily data update $(date +'%Y-%m-%d')"
+            git push
+          fi
