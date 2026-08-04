@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""根据 data/ 最新数据更新 index.html 中的静态占位数字 (降级模式显示用)"""
+"""根据 data/ 最新数据更新 index.html 中的静态占位数字 (降级模式显示用)
+基于 id/正则替换, 不依赖硬编码旧值, 可重复运行
+"""
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -28,10 +30,12 @@ g_ret = (g_close.iloc[-1] / g_close.iloc[0] - 1) * 100
 v_ret = (v_close.iloc[-1] / v_close.iloc[0] - 1) * 100
 g_min_dd = g_dd.min()
 v_min_dd = v_dd.min()
-g_min_date = dates.iloc[int(g_dd.idxmin())].date()
-v_min_date = dates.iloc[int(v_dd.idxmin())].date()
-g_peak_date = dates.iloc[int(g_close.iloc[:int(g_dd.idxmin()) + 1].idxmax())].date()
-v_peak_date = dates.iloc[int(v_close.iloc[:int(v_dd.idxmin()) + 1].idxmax())].date()
+g_min_idx = int(g_dd.idxmin())
+v_min_idx = int(v_dd.idxmin())
+g_min_date = dates.iloc[g_min_idx].date()
+v_min_date = dates.iloc[v_min_idx].date()
+g_peak_date = dates.iloc[int(g_close.iloc[:g_min_idx + 1].idxmax())].date()
+v_peak_date = dates.iloc[int(v_close.iloc[:v_min_idx + 1].idxmax())].date()
 
 # 再平衡回测
 INIT = 10000.0
@@ -53,62 +57,87 @@ bh_ret = (bh / (2 * INIT) - 1) * 100
 port_max_dd = ((port / np.maximum.accumulate(port)) - 1).min() * 100
 p_ret = port_ret[-1]
 p_bh = bh_ret[-1]
+g_high = g['最高'].max()
+g_low = g['最低'].min()
+v_high = v['最高'].max()
+v_low = v['最低'].min()
+g_last = g_close.iloc[-1]
+v_last = v_close.iloc[-1]
 
 def pct(x, sign=True):
     s = ('+' if x >= 0 else '') if sign else ''
     return f'{s}{x:.2f}%'
 
-# 读取 index.html
 path = 'index.html'
 html = open(path, encoding='utf-8').read()
 
-# 逐个替换占位值
-replacements = [
-    ('id="stat_g_ret">+19.05%', f'id="stat_g_ret">{pct(g_ret)}'),
-    ('id="stat_v_ret">+11.52%', f'id="stat_v_ret">{pct(v_ret)}'),
-    ('id="stat_g_dd">-37.68%', f'id="stat_g_dd">{pct(g_min_dd, False)}'),
-    ('id="stat_v_dd">-16.56%', f'id="stat_v_dd">{pct(v_min_dd, False)}'),
-    ('id="stat_p_ret" style="color:var(--growth)">+18.26%',
-     f'id="stat_p_ret" style="color:var(--growth)">{pct(p_ret)}'),
-    ('id="stat_p_dd">-16.83%', f'id="stat_p_dd">{pct(port_max_dd, False)}'),
-    ('id="stat_g_dd_note">发生于 2026-07-30（峰值 06-22）',
-     f'id="stat_g_dd_note">发生于 {g_min_date}（峰值 {g_peak_date.strftime("%m-%d")}）'),
-    ('id="stat_v_dd_note">发生于 2026-06-30（峰值 03-12）',
-     f'id="stat_v_dd_note">发生于 {v_min_date}（峰值 {v_peak_date.strftime("%m-%d")}）'),
-    ('id="stat_p_ret_note">超额 +2.98pp vs 买入持有',
-     f'id="stat_p_ret_note">超额 {pct(p_ret - p_bh)} vs 买入持有'),
-    ('id="stat_p_dd_note">显著低于纯成长 ETF', 'id="stat_p_dd_note">显著低于纯成长 ETF'),
-    ('id="cap_g">成长ETF（159259）· 区间最高 1.827 / 最低 1.017 · 最新收盘 1.163',
-     f'id="cap_g">成长ETF（159259）· 区间最高 {g["最高"].max():.3f} / 最低 {g["最低"].min():.3f} · 最新收盘 {g_close.iloc[-1]:.3f}'),
-    ('id="cap_v">价值ETF（159263）· 区间最高 1.247 / 最低 1.024 · 最新收盘 1.170',
-     f'id="cap_v">价值ETF（159263）· 区间最高 {v["最高"].max():.3f} / 最低 {v["最低"].min():.3f} · 最新收盘 {v_close.iloc[-1]:.3f}'),
-]
+def repl_id(html, el_id, new_value, cls_pattern='value up|value blue|value down'):
+    """替换 <div class="..." id="el_id">VALUE</div> 中的 VALUE (保留 class 与 style)"""
+    pat = re.compile(r'(<div class="(?:%s)" id="%s"[^>]*>)[^<]*(</div>)' % (cls_pattern, re.escape(el_id)))
+    new_html, cnt = pat.subn(lambda m: m.group(1) + new_value + m.group(2), html)
+    if cnt == 0:
+        # 尝试宽松匹配任何 class
+        pat2 = re.compile(r'(<div [^>]*id="%s"[^>]*>)[^<]*(</div>)' % re.escape(el_id))
+        new_html, cnt = pat2.subn(lambda m: m.group(1) + new_value + m.group(2), html)
+    return new_html, cnt
 
-changed = 0
-for old, new in replacements:
-    if old in html:
-        html = html.replace(old, new)
-        changed += 1
-    else:
-        print(f'[warn] 未找到: {old[:50]}')
+def repl_note(html, el_id, new_value):
+    pat = re.compile(r'(<div class="note" id="%s"[^>]*>)[^<]*(</div>)' % re.escape(el_id))
+    new_html, cnt = pat.subn(lambda m: m.group(1) + new_value + m.group(2), html)
+    return new_html, cnt
 
-# 更新再平衡 cap 与小结中的数字
-html = re.sub(
-    r'回测结果：再平衡组合 [^（]*（[0-9,.]* 元），买入持有 [^（]*（[0-9,.]* 元），超额 [^；]*；',
-    f'回测结果：再平衡组合 {pct(p_ret)}（{port[-1]:,.2f} 元），买入持有 {pct(p_bh)}（{bh[-1]:,.2f} 元），超额 {pct(p_ret - p_bh)} 个百分点；',
-    html)
-html = re.sub(r'组合最大回撤 -[0-9.]+%', f'组合最大回撤 {pct(port_max_dd, False)}', html)
-html = re.sub(r'成长ETF 区间涨幅 \+[0-9.]+%，领先价值ETF 的 \+[0-9.]+%',
-              f'成长ETF 区间涨幅 {pct(g_ret)}，领先价值ETF 的 {pct(v_ret)}', html)
-html = re.sub(r'50/50 每两周再平衡组合收益 \+[0-9.]+%，跑赢买入持有（\+[0-9.]+%）',
-              f'50/50 每两周再平衡组合收益 {pct(p_ret)}，跑赢买入持有（{pct(p_bh)}）', html)
-# 数据区间 footer
-html = re.sub(r'统计区间 2025-09-01 起[^<]*',
-              f'统计区间 2025-09-01 ~ {dates.iloc[-1].date()} · 打开页面时自动更新', html)
-html = re.sub(r'id="data_range">[^<]*',
-              f'id="data_range">数据区间：2025-09-01 ~ {dates.iloc[-1].date()}（{n} 个交易日）· 打开页面时实时更新', html)
+def repl_cap(html, el_id, new_value):
+    pat = re.compile(r'(<div class="cap" id="%s"[^>]*>)[^<]*(</div>)' % re.escape(el_id))
+    new_html, cnt = pat.subn(lambda m: m.group(1) + new_value + m.group(2), html)
+    return new_html, cnt
+
+total = 0
+# 指标卡数值
+html, c = repl_id(html, 'stat_g_ret', pct(g_ret)); total += c
+html, c = repl_id(html, 'stat_v_ret', pct(v_ret)); total += c
+html, c = repl_id(html, 'stat_g_dd', pct(g_min_dd, False)); total += c
+html, c = repl_id(html, 'stat_v_dd', pct(v_min_dd, False)); total += c
+html, c = repl_id(html, 'stat_p_ret', pct(p_ret)); total += c
+html, c = repl_id(html, 'stat_p_dd', pct(port_max_dd, False)); total += c
+# 备注
+html, c = repl_note(html, 'stat_g_dd_note', f'发生于 {g_min_date}（峰值 {g_peak_date.strftime("%m-%d")}）'); total += c
+html, c = repl_note(html, 'stat_v_dd_note', f'发生于 {v_min_date}（峰值 {v_peak_date.strftime("%m-%d")}）'); total += c
+html, c = repl_note(html, 'stat_p_ret_note', f'超额 {pct(p_ret - p_bh)} vs 买入持有'); total += c
+# 图注
+html, c = repl_cap(html, 'cap_g', f'成长ETF（159259）· 区间最高 {g_high:.3f} / 最低 {g_low:.3f} · 最新收盘 {g_last:.3f}'); total += c
+html, c = repl_cap(html, 'cap_v', f'价值ETF（159263）· 区间最高 {v_high:.3f} / 最低 {v_low:.3f} · 最新收盘 {v_last:.3f}'); total += c
+# 再平衡说明段
+html, c = repl_cap(html, 'cap_rebal',
+    f'回测结果：再平衡组合 {pct(p_ret)}（{port[-1]:,.2f} 元），买入持有 {pct(p_bh)}（{bh[-1]:,.2f} 元），'
+    f'超额 {pct(p_ret - p_bh)} 个百分点；组合最大回撤 {pct(port_max_dd, False)}，'
+    f'介于纯成长（{pct(g_min_dd, False)}）与纯价值（{pct(v_min_dd, False)}）之间，接近价值水平。'); total += c
+
+# 顶部数据范围
+pat_range = re.compile(r'(id="data_range">)[^<]*(<)')
+html, c = pat_range.subn(lambda m: m.group(1) +
+    f'数据区间：2025-09-01 ~ {dates.iloc[-1].date()}（{n} 个交易日）· 打开页面时实时更新' + m.group(2), html)
+total += c
+
+# 小结列表里的动态数字
+html, c = re.subn(r'(<li><b>收益</b>：)[^<]*(</li>)',
+    lambda m: m.group(1) + f'成长ETF 区间涨幅 {pct(g_ret)}，领先价值ETF 的 {pct(v_ret)}。' + m.group(2), html)
+total += c
+html, c = re.subn(r'(<li><b>再平衡</b>：)[^<]*(</li>)',
+    lambda m: m.group(1) +
+    f'50/50 每两周再平衡组合收益 {pct(p_ret)}，跑赢买入持有（{pct(p_bh)}），'
+    f'且最大回撤收窄至 {pct(port_max_dd, False)}——在震荡市中既吃到成长反弹，又通过"低买高卖"降低波动。' + m.group(2), html)
+total += c
+# 风险小结里的回撤数字
+html, c = re.subn(r'成长ETF 最大回撤 -[0-9.]+%，约为价值ETF（-[0-9.]+%）的 [0-9.]+ 倍；年化波动率约 [0-9]+% vs [0-9]+%',
+    f'成长ETF 最大回撤 {pct(g_min_dd, False)}，约为价值ETF（{pct(v_min_dd, False)}）的 {abs(g_min_dd / v_min_dd):.1f} 倍；年化波动率约 51% vs 17%', html)
+total += c
+
+# footer 数据区间
+html, c = re.subn(r'(统计区间 )[^<]*( · 打开页面时自动更新)',
+    lambda m: m.group(1) + f'2025-09-01 ~ {dates.iloc[-1].date()}' + m.group(2), html)
+total += c
 
 open(path, 'w', encoding='utf-8').write(html)
-print(f'index.html 更新完成: {changed} 处占位值替换')
+print(f'index.html 更新完成: {total} 处替换')
 print(f'数据: {dates.iloc[0].date()} ~ {dates.iloc[-1].date()} ({n} 交易日)')
-print(f'成长 {pct(g_ret)} / 价值 {pct(v_ret)} / 再平衡 {pct(p_ret)} / 最大回撤 {pct(port_max_dd, False)}')
+print(f'成长 {pct(g_ret)} / 价值 {pct(v_ret)} / 再平衡 {pct(p_ret)} / 组合最大回撤 {pct(port_max_dd, False)}')
