@@ -20,8 +20,8 @@ GROUPS = {
         'start_label': '2025-09-01',
     },
     'sd': {
-        'label_a': '中证500ETF南方', 'label_b': '中证红利ETF招商',
-        'code_a': '510500', 'code_b': '515080',
+        'label_a': '沪深300ETF', 'label_b': '创业板ETF',
+        'code_a': '510300', 'code_b': '159915',
         'start_label': '2022-01-01',
     },
 }
@@ -41,7 +41,13 @@ def analyze(cfg):
     """计算单组全部指标, 返回 dict"""
     a = load(cfg['code_a'])
     b = load(cfg['code_b'])
-    n = min(len(a), len(b))
+    # 对齐到共同交易日
+    a = a.set_index('日期')
+    b = b.set_index('日期')
+    common = a.index.intersection(b.index)
+    a = a.loc[common].sort_index().reset_index()
+    b = b.loc[common].sort_index().reset_index()
+    n = len(a)
     dates = a['日期'].iloc[:n]
     a_close = a['收盘'].iloc[:n].reset_index(drop=True)
     b_close = b['收盘'].iloc[:n].reset_index(drop=True)

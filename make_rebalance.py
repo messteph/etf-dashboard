@@ -31,10 +31,10 @@ GROUPS = {
         'code_a': '159259', 'code_b': '159263',
         'prefix': 'gv',
     },
-    'sm500_dividend': {
-        'title_a': '中证500ETF南方', 'title_b': '中证红利ETF招商',
-        'code_a': '510500', 'code_b': '515080',
-        'prefix': 'sd',
+    'hs300_cyb': {
+        'title_a': '沪深300ETF', 'title_b': '创业板ETF',
+        'code_a': '510300', 'code_b': '159915',
+        'prefix': 'hc',
     },
 }
 
@@ -46,7 +46,13 @@ def render_pair(cfg):
     la = f"{cfg['title_a']} ({cfg['code_a']})"
     lb = f"{cfg['title_b']} ({cfg['code_b']})"
 
-    assert len(g) == len(v), '两只ETF交易日数不一致'
+    # 对齐到共同交易日
+    g = g.set_index('日期')
+    v = v.set_index('日期')
+    common = g.index.intersection(v.index)
+    g = g.loc[common].sort_index().reset_index()
+    v = v.loc[common].sort_index().reset_index()
+    assert len(g) == len(v), '对齐后交易日数仍不一致'
     n = len(g)
     dates = g['日期'].values
     g_close = g['收盘'].values

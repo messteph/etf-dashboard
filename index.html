@@ -74,10 +74,12 @@
   .blue { color: var(--value); }
   .green { color: #059669; }
   .amber { color: #d97706; }
+  .cyan { color: #0284c7; }
+  .pink { color: #db2777; }
   .stat.a1 { border-top: 3px solid var(--growth); }
   .stat.a2 { border-top: 3px solid var(--value); }
-  .stat.s1 { border-top: 3px solid #059669; }
-  .stat.s2 { border-top: 3px solid #d97706; }
+  .stat.s1 { border-top: 3px solid #0284c7; }
+  .stat.s2 { border-top: 3px solid #db2777; }
 
   /* Sections */
   .section { margin-top: 40px; }
@@ -105,8 +107,8 @@
   .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
   .legend .lg { background: var(--growth); }
   .legend .lv { background: var(--value); }
-  .legend .l500 { background: #059669; }
-  .legend .lred { background: #d97706; }
+  .legend .l300 { background: #0284c7; }
+  .legend .lcyb { background: #db2777; }
   .legend .lp { background: #7c3aed; }
   .legend .lb { background: #94a3b8; }
 
@@ -138,14 +140,13 @@
   <header>
     <div class="kicker">ETF 风格对比分析 · 实时数据</div>
     <h1>基金组合走势、回撤与再平衡策略</h1>
-    <p>打开页面时自动更新最新数据 · 多数据源容错（东财 / 腾讯 / 新浪）</p>
     <div id="live-banner"></div>
   </header>
 
   <!-- 选项卡 -->
   <div class="tabs">
     <button class="tab-btn active" data-tab="gv" id="tab-gv">成长 vs 价值（159259 / 159263）</button>
-    <button class="tab-btn" data-tab="sd" id="tab-sd">中证500 vs 红利（510500 / 515080）</button>
+    <button class="tab-btn" data-tab="sd" id="tab-sd">沪深300 vs 创业板（510300 / 159915）</button>
   </div>
 
   <!-- ============ 选项卡1: 成长 vs 价值 ============ -->
@@ -256,39 +257,39 @@
     </div>
   </div>
 
-  <!-- ============ 选项卡2: 中证500 vs 红利 ============ -->
+  <!-- ============ 选项卡2: 沪深300 vs 创业板 ============ -->
   <div class="tab-panel" id="panel-sd">
     <p class="section-desc" id="sd_range" style="margin-top:16px">数据区间：2022-01-01 起</p>
 
     <div class="stats">
       <div class="stat s1">
-        <div class="label">中证500ETF 区间涨幅</div>
-        <div class="value green" id="sd_stat_a_ret">+11.34%</div>
+        <div class="label">沪深300ETF 区间涨幅</div>
+        <div class="value cyan" id="sd_stat_a_ret">+1.75%</div>
         <div class="note">2022-01-01 起</div>
       </div>
       <div class="stat s2">
-        <div class="label">中证红利ETF 区间涨幅</div>
-        <div class="value amber" id="sd_stat_b_ret">+32.76%</div>
+        <div class="label">创业板ETF 区间涨幅</div>
+        <div class="value pink" id="sd_stat_b_ret">+11.41%</div>
         <div class="note">2022-01-01 起</div>
       </div>
       <div class="stat s1">
-        <div class="label">中证500ETF 最大回撤</div>
-        <div class="value down" id="sd_stat_a_dd">-39.27%</div>
-        <div class="note" id="sd_stat_a_dd_note">发生于 2024-02-05（峰值 01-04）</div>
+        <div class="label">沪深300ETF 最大回撤</div>
+        <div class="value down" id="sd_stat_a_dd">-34.87%</div>
+        <div class="note" id="sd_stat_a_dd_note">发生于 2024-02-02（峰值 01-04）</div>
       </div>
       <div class="stat s2">
-        <div class="label">中证红利ETF 最大回撤</div>
-        <div class="value down" id="sd_stat_b_dd">-16.08%</div>
-        <div class="note" id="sd_stat_b_dd_note">发生于 2022-03-15（峰值 02-21）</div>
+        <div class="label">创业板ETF 最大回撤</div>
+        <div class="value down" id="sd_stat_b_dd">-52.44%</div>
+        <div class="note" id="sd_stat_b_dd_note">发生于 2024-08-27（峰值 01-04）</div>
       </div>
       <div class="stat s1">
         <div class="label">50/50 再平衡组合收益</div>
-        <div class="value green" id="sd_stat_p_ret" style="color:#059669">+24.24%</div>
-        <div class="note" id="sd_stat_p_ret_note">超额 +2.19% vs 买入持有</div>
+        <div class="value cyan" id="sd_stat_p_ret" style="color:#0284c7">+7.79%</div>
+        <div class="note" id="sd_stat_p_ret_note">超额 +1.20% vs 买入持有</div>
       </div>
       <div class="stat s2">
         <div class="label">再平衡组合最大回撤</div>
-        <div class="value down" id="sd_stat_p_dd">-21.25%</div>
+        <div class="value down" id="sd_stat_p_dd">-43.96%</div>
         <div class="note" id="sd_stat_p_dd_note">显著低于单基金最大回撤</div>
       </div>
     </div>
@@ -299,19 +300,19 @@
       <div class="chart-grid">
         <div class="chart-card">
           <div id="chart-sd-a-trend" class="chart-box"></div>
-          <div class="cap" id="sd_cap_a">中证500ETF南方（510500）· 区间最高 9.156 / 最低 3.962 · 最新收盘 7.601</div>
+          <div class="cap" id="sd_cap_a">沪深300ETF（510300）· 区间最高 5.095 / 最低 2.891 · 最新收盘 4.651</div>
         </div>
         <div class="chart-card">
           <div id="chart-sd-b-trend" class="chart-box"></div>
-          <div class="cap" id="sd_cap_b">中证红利ETF招商（515080）· 区间最高 1.662 / 最低 0.986 · 最新收盘 1.548</div>
+          <div class="cap" id="sd_cap_b">创业板ETF（159915）· 区间最高 4.395 / 最低 1.444 · 最新收盘 3.514</div>
         </div>
         <div class="chart-card chart-full">
           <div class="legend">
-            <span><i class="l500"></i>中证500ETF南方（510500）</span>
-            <span><i class="lred"></i>中证红利ETF招商（515080）</span>
+            <span><i class="l300"></i>沪深300ETF（510300）</span>
+            <span><i class="lcyb"></i>创业板ETF（159915）</span>
           </div>
           <div id="chart-sd-compare" class="chart-box tall"></div>
-          <div class="cap">起点归一化为 100 的对比走势——红利风格长期稳步跑赢中证500。</div>
+          <div class="cap">起点归一化为 100 的对比走势——直观呈现两只宽基/成长指数在相同时间窗口内的相对强弱。</div>
         </div>
       </div>
     </div>
@@ -322,19 +323,19 @@
       <div class="chart-grid">
         <div class="chart-card">
           <div id="chart-sd-a-dd" class="chart-box"></div>
-          <div class="cap">中证500ETF 最大回撤 -39.27%：2024 年初微盘股流动性危机期间深调。</div>
+          <div class="cap">沪深300ETF 最大回撤：大盘蓝筹相对稳健，回撤深度小于成长风格。</div>
         </div>
         <div class="chart-card">
           <div id="chart-sd-b-dd" class="chart-box"></div>
-          <div class="cap">中证红利ETF 最大回撤 -16.08%：防御属性突出，回撤远小于宽基指数。</div>
+          <div class="cap">创业板ETF 最大回撤：高弹性成长风格，下跌市中回撤通常更深。</div>
         </div>
         <div class="chart-card chart-full">
           <div class="legend">
-            <span><i class="l500"></i>中证500ETF 回撤</span>
-            <span><i class="lred"></i>中证红利ETF 回撤</span>
+            <span><i class="l300"></i>沪深300ETF 回撤</span>
+            <span><i class="lcyb"></i>创业板ETF 回撤</span>
           </div>
           <div id="chart-sd-compare-dd" class="chart-box tall"></div>
-          <div class="cap">回撤对比：红利风格在历次下跌中回撤均显著小于中证500。</div>
+          <div class="cap">回撤对比：创业板波动显著高于沪深300，宽基蓝筹防御性更强。</div>
         </div>
       </div>
     </div>
@@ -348,7 +349,7 @@
       <div class="chart-grid">
         <div class="chart-card chart-full">
           <div id="chart-sd-rebal" class="chart-box tall"></div>
-          <div class="cap" id="sd_cap_rebal">回测结果：再平衡组合 +24.24%（24,847.83 元），买入持有 +22.05%（24,409.89 元），超额 +2.19% 个百分点；组合最大回撤 -21.25%，介于 中证500ETF南方（-39.27%）与 中证红利ETF招商（-16.08%）之间。</div>
+          <div class="cap" id="sd_cap_rebal">回测结果：再平衡组合 +7.79%（21,557.15 元），买入持有 +6.58%（21,316.42 元），超额 +1.20% 个百分点；组合最大回撤 -43.96%，介于 沪深300ETF（-34.87%）与 创业板ETF（-52.44%）之间。</div>
         </div>
       </div>
     </div>
@@ -356,10 +357,10 @@
     <div class="callout">
       <h3>📌 对比小结（2022-01-01 起，约 4.6 年）</h3>
       <ul>
-        <li><b>收益</b>：中证红利ETF 区间涨幅 +32.76%，显著跑赢中证500ETF 的 +11.34%——红利低波策略在中长期有稳定超额。</li>
-        <li><b>风险</b>：中证500ETF 最大回撤 -39.27%（2024-02 微盘股流动性危机），红利ETF 仅 -16.08%（2022-03 俄乌冲击），防御性突出。</li>
-        <li><b>再平衡</b>：50/50 每两周再平衡 +24.24%，跑赢买入持有（+22.05%），组合最大回撤 -21.25%，介于两者之间。</li>
-        <li><b>结论</b>：红利风格适合作为底仓长期持有；加入中证500 并定期再平衡，可在保留部分弹性（博取 2024/2025 反弹）的同时控制整体回撤。</li>
+        <li><b>收益</b>：创业板高弹性带来更高波动，长期收益取决于风格轮动；沪深300 代表大盘蓝筹核心资产。</li>
+        <li><b>风险</b>：创业板ETF 最大回撤通常显著大于沪深300ETF，持有体验波动更大。</li>
+        <li><b>再平衡</b>：50/50 每两周再平衡在两者间低买高卖，可平滑单一风格的风险暴露。</li>
+        <li><b>结论</b>：沪深300 适合作为底仓，创业板提供进攻弹性；按 50/50 定期再平衡可在收益与回撤间取得平衡。</li>
       </ul>
     </div>
   </div>

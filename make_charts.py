@@ -34,11 +34,11 @@ GROUPS = {
         'color_a': '#e0522a', 'color_b': '#2563eb',
         'prefix': 'gv',
     },
-    'sm500_dividend': {
-        'title_a': '中证500ETF南方', 'title_b': '中证红利ETF招商',
-        'code_a': '510500', 'code_b': '515080',
-        'color_a': '#059669', 'color_b': '#d97706',
-        'prefix': 'sd',
+    'hs300_cyb': {
+        'title_a': '沪深300ETF', 'title_b': '创业板ETF',
+        'code_a': '510300', 'code_b': '159915',
+        'color_a': '#0284c7', 'color_b': '#db2777',
+        'prefix': 'hc',
     },
 }
 
@@ -77,6 +77,12 @@ def render_pair(cfg):
     p = cfg['prefix']
     a = load(cfg['code_a'])
     b = load(cfg['code_b'])
+    # 对齐到共同交易日
+    a = a.set_index('日期')
+    b = b.set_index('日期')
+    common = a.index.intersection(b.index)
+    a = a.loc[common].sort_index().reset_index()
+    b = b.loc[common].sort_index().reset_index()
     a['dd'] = drawdown(a['收盘'])
     b['dd'] = drawdown(b['收盘'])
     a_trough, a_trough_date, a_peak_date = max_dd_info(a)
