@@ -192,7 +192,16 @@
         document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
         document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
         btn.classList.add('active');
-        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+        const panel = document.getElementById('panel-' + btn.dataset.tab);
+        panel.classList.add('active');
+        // 面板从 display:none 变为可见后, 重算内部所有 ECharts 尺寸
+        // (隐藏容器中初始化的图表宽度为 0, 必须 resize 才正常显示)
+        requestAnimationFrame(() => {
+          panel.querySelectorAll('.chart-box').forEach((el) => {
+            const inst = echarts.getInstanceByDom(el);
+            if (inst) inst.resize();
+          });
+        });
       });
     });
   }
