@@ -162,19 +162,30 @@ function renderRebalance(elId, r) {
   return chart;
 }
 
-/* ---------- 指标卡更新 ---------- */
+/* ---------- 指标表更新 ---------- */
 function updateStats(pfx, cfg, s, r) {
   const fmt = (v, d = 2) => v.toFixed(d) + '%';
-  setText(pfx + '_stat_a_ret', (s.retA >= 0 ? '+' : '') + fmt(s.retA));
-  setText(pfx + '_stat_b_ret', (s.retB >= 0 ? '+' : '') + fmt(s.retB));
-  setText(pfx + '_stat_a_dd', fmt(s.minDDA));
-  setText(pfx + '_stat_b_dd', fmt(s.minDDB));
-  setText(pfx + '_stat_a_dd_note', '发生于 ' + s.minDDA_date + '（峰值 ' + s.peakA_date + '）');
-  setText(pfx + '_stat_b_dd_note', '发生于 ' + s.minDDB_date + '（峰值 ' + s.peakB_date + '）');
-  setText(pfx + '_stat_p_ret', (r.finalPort >= 0 ? '+' : '') + fmt(r.finalPort));
-  setText(pfx + '_stat_p_dd', fmt(r.maxDD));
-  setText(pfx + '_stat_p_ret_note', '超额 ' + ((r.finalPort - r.finalBH) >= 0 ? '+' : '') + fmt(r.finalPort - r.finalBH) + ' vs 买入持有');
-  setText(pfx + '_stat_p_dd_note', '显著低于单基金最大回撤');
+  // 区间涨幅
+  setText(pfx + '_tbl_a_ret', (s.retA >= 0 ? '+' : '') + fmt(s.retA));
+  setText(pfx + '_tbl_b_ret', (s.retB >= 0 ? '+' : '') + fmt(s.retB));
+  setText(pfx + '_tbl_p_ret', (r.finalPort >= 0 ? '+' : '') + fmt(r.finalPort));
+  setText(pfx + '_tbl_bh_ret', (r.finalBH >= 0 ? '+' : '') + fmt(r.finalBH));
+  // 年化收益率 (基于交易日数, 252 个交易日/年)
+  const ann = (v) => (v >= 0 ? '+' : '') + fmt(v);
+  setText(pfx + '_tbl_a_ann', ann(s.annA));
+  setText(pfx + '_tbl_b_ann', ann(s.annB));
+  setText(pfx + '_tbl_p_ann', ann(r.annPort));
+  setText(pfx + '_tbl_bh_ann', ann(r.annBH));
+  // 最大回撤
+  setText(pfx + '_tbl_a_dd', fmt(s.minDDA));
+  setText(pfx + '_tbl_b_dd', fmt(s.minDDB));
+  setText(pfx + '_tbl_p_dd', fmt(r.maxDD));
+  setText(pfx + '_tbl_bh_dd', fmt(r.maxDDBH));
+  // 回撤发生日
+  setText(pfx + '_tbl_a_dd_date', s.minDDA_date);
+  setText(pfx + '_tbl_b_dd_date', s.minDDB_date);
+  setText(pfx + '_tbl_p_dd_date', r.maxDDDate);
+  setText(pfx + '_tbl_bh_dd_date', r.maxDDBHDate);
 
   setText(pfx + '_cap_a', `${cfg.labelA}（${cfg.codeA}）· 区间最高 ${s.highA.toFixed(3)} / 最低 ${s.lowA.toFixed(3)} · 最新收盘 ${s.lastA.toFixed(3)}`);
   setText(pfx + '_cap_b', `${cfg.labelB}（${cfg.codeB}）· 区间最高 ${s.highB.toFixed(3)} / 最低 ${s.lowB.toFixed(3)} · 最新收盘 ${s.lastB.toFixed(3)}`);

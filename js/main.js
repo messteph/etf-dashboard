@@ -120,6 +120,8 @@
       normB: closeB.map((c) => (c / closeB[0]) * 100),
       maA: sma(closeA, 20), maB: sma(closeB, 20),
       retA, retB, minDDA, minDDB,
+      annA: ((1 + retA / 100) ** (252 / rowsA.length) - 1) * 100,
+      annB: ((1 + retB / 100) ** (252 / rowsB.length) - 1) * 100,
       minDDA_date: rowsA[minIdxA].date, minDDB_date: rowsB[minIdxB].date,
       peakA_date: rowsA[peakIdxA].date, peakB_date: rowsB[peakIdxB].date,
       highA: Math.max(...rowsA.map((r) => r.high)), lowA: Math.min(...rowsA.map((r) => r.low)),

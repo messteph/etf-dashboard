@@ -76,10 +76,34 @@
   .amber { color: #d97706; }
   .cyan { color: #0284c7; }
   .pink { color: #db2777; }
+  .purple { color: #7c3aed; }
+  .gray { color: #64748b; }
   .stat.a1 { border-top: 3px solid var(--growth); }
   .stat.a2 { border-top: 3px solid var(--value); }
   .stat.s1 { border-top: 3px solid #0284c7; }
   .stat.s2 { border-top: 3px solid #db2777; }
+
+  /* Stats table */
+  .stats-table-wrap {
+    margin: 28px 0 8px; background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: 0 1px 2px rgba(15,23,42,.04); overflow: hidden;
+  }
+  .stats-table { width: 100%; border-collapse: collapse; }
+  .stats-table th, .stats-table td {
+    padding: 13px 18px; text-align: center; font-size: 14px;
+  }
+  .stats-table thead th {
+    background: #f8fafc; color: var(--text); font-weight: 700; font-size: 14px;
+    border-bottom: 2px solid var(--border); line-height: 1.4;
+  }
+  .stats-table thead th .sub { display: block; font-size: 11px; color: var(--sub); font-weight: 500; margin-top: 2px; }
+  .stats-table tbody td { border-bottom: 1px solid #f1f5f9; }
+  .stats-table tbody tr:last-child td { border-bottom: none; }
+  .stats-table tbody td:first-child {
+    text-align: left; color: var(--sub); background: #fbfcfd; font-weight: 600;
+  }
+  .stats-table .val { font-weight: 800; font-size: 15px; }
+  .stats-table tbody tr:hover td { background: #fafbfc; }
 
   /* Sections */
   .section { margin-top: 40px; }
@@ -153,37 +177,48 @@
   <div class="tab-panel active" id="panel-gv">
     <p class="section-desc" id="gv_range" style="margin-top:16px">数据区间：2025-09-01 起</p>
 
-    <div class="stats">
-      <div class="stat a1">
-        <div class="label">成长ETF 区间涨幅</div>
-        <div class="value up" id="gv_stat_a_ret">+18.76%</div>
-        <div class="note">2025-09-01 起</div>
-      </div>
-      <div class="stat a2">
-        <div class="label">价值ETF 区间涨幅</div>
-        <div class="value blue" id="gv_stat_b_ret">+10.94%</div>
-        <div class="note">2025-09-01 起</div>
-      </div>
-      <div class="stat a1">
-        <div class="label">成长ETF 最大回撤</div>
-        <div class="value down" id="gv_stat_a_dd">-37.68%</div>
-        <div class="note" id="gv_stat_a_dd_note">发生于 2026-07-30（峰值 06-22）</div>
-      </div>
-      <div class="stat a2">
-        <div class="label">价值ETF 最大回撤</div>
-        <div class="value down" id="gv_stat_b_dd">-16.56%</div>
-        <div class="note" id="gv_stat_b_dd_note">发生于 2026-06-30（峰值 03-12）</div>
-      </div>
-      <div class="stat a1">
-        <div class="label">50/50 再平衡组合收益</div>
-        <div class="value up" id="gv_stat_p_ret" style="color:var(--growth)">+17.82%</div>
-        <div class="note" id="gv_stat_p_ret_note">超额 +2.97% vs 买入持有</div>
-      </div>
-      <div class="stat a2">
-        <div class="label">再平衡组合最大回撤</div>
-        <div class="value down" id="gv_stat_p_dd">-16.83%</div>
-        <div class="note" id="gv_stat_p_dd_note">显著低于单基金最大回撤</div>
-      </div>
+    <div class="stats-table-wrap">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>指标</th>
+            <th>成长ETF<br><span class="sub">159259</span></th>
+            <th>价值ETF<br><span class="sub">159263</span></th>
+            <th>50/50 再平衡<br><span class="sub">组合</span></th>
+            <th>买入持有<br><span class="sub">对照</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>区间涨幅</td>
+            <td class="val up" id="gv_tbl_a_ret">+18.76%</td>
+            <td class="val blue" id="gv_tbl_b_ret">+10.94%</td>
+            <td class="val purple" id="gv_tbl_p_ret">+17.82%</td>
+            <td class="val gray" id="gv_tbl_bh_ret">+14.85%</td>
+          </tr>
+          <tr>
+            <td>年化收益率</td>
+            <td class="val up" id="gv_tbl_a_ann">+21.34%</td>
+            <td class="val blue" id="gv_tbl_b_ann">+12.39%</td>
+            <td class="val purple" id="gv_tbl_p_ann">+20.26%</td>
+            <td class="val gray" id="gv_tbl_bh_ann">+16.86%</td>
+          </tr>
+          <tr>
+            <td>最大回撤</td>
+            <td class="val down" id="gv_tbl_a_dd">-37.68%</td>
+            <td class="val down" id="gv_tbl_b_dd">-16.56%</td>
+            <td class="val down" id="gv_tbl_p_dd">-16.83%</td>
+            <td class="val down" id="gv_tbl_bh_dd">-20.44%</td>
+          </tr>
+          <tr>
+            <td>回撤发生日</td>
+            <td class="val" id="gv_tbl_a_dd_date">2026-07-30</td>
+            <td class="val" id="gv_tbl_b_dd_date">2026-06-30</td>
+            <td class="val" id="gv_tbl_p_dd_date">2026-07-30</td>
+            <td class="val" id="gv_tbl_bh_dd_date">2026-07-30</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <div class="section">
@@ -261,37 +296,48 @@
   <div class="tab-panel" id="panel-sd">
     <p class="section-desc" id="sd_range" style="margin-top:16px">数据区间：2022-01-01 起</p>
 
-    <div class="stats">
-      <div class="stat s1">
-        <div class="label">沪深300ETF 区间涨幅</div>
-        <div class="value cyan" id="sd_stat_a_ret">+1.75%</div>
-        <div class="note">2022-01-01 起</div>
-      </div>
-      <div class="stat s2">
-        <div class="label">创业板ETF 区间涨幅</div>
-        <div class="value pink" id="sd_stat_b_ret">+11.41%</div>
-        <div class="note">2022-01-01 起</div>
-      </div>
-      <div class="stat s1">
-        <div class="label">沪深300ETF 最大回撤</div>
-        <div class="value down" id="sd_stat_a_dd">-34.87%</div>
-        <div class="note" id="sd_stat_a_dd_note">发生于 2024-02-02（峰值 01-04）</div>
-      </div>
-      <div class="stat s2">
-        <div class="label">创业板ETF 最大回撤</div>
-        <div class="value down" id="sd_stat_b_dd">-52.44%</div>
-        <div class="note" id="sd_stat_b_dd_note">发生于 2024-08-27（峰值 01-04）</div>
-      </div>
-      <div class="stat s1">
-        <div class="label">50/50 再平衡组合收益</div>
-        <div class="value cyan" id="sd_stat_p_ret" style="color:#0284c7">+7.79%</div>
-        <div class="note" id="sd_stat_p_ret_note">超额 +1.20% vs 买入持有</div>
-      </div>
-      <div class="stat s2">
-        <div class="label">再平衡组合最大回撤</div>
-        <div class="value down" id="sd_stat_p_dd">-43.96%</div>
-        <div class="note" id="sd_stat_p_dd_note">显著低于单基金最大回撤</div>
-      </div>
+    <div class="stats-table-wrap">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>指标</th>
+            <th>沪深300ETF<br><span class="sub">510300</span></th>
+            <th>创业板ETF<br><span class="sub">159915</span></th>
+            <th>50/50 再平衡<br><span class="sub">组合</span></th>
+            <th>买入持有<br><span class="sub">对照</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>区间涨幅</td>
+            <td class="val cyan" id="sd_tbl_a_ret">+1.75%</td>
+            <td class="val pink" id="sd_tbl_b_ret">+11.41%</td>
+            <td class="val purple" id="sd_tbl_p_ret">+7.79%</td>
+            <td class="val gray" id="sd_tbl_bh_ret">+6.58%</td>
+          </tr>
+          <tr>
+            <td>年化收益率</td>
+            <td class="val cyan" id="sd_tbl_a_ann">+0.39%</td>
+            <td class="val pink" id="sd_tbl_b_ann">+2.48%</td>
+            <td class="val purple" id="sd_tbl_p_ann">+1.72%</td>
+            <td class="val gray" id="sd_tbl_bh_ann">+1.46%</td>
+          </tr>
+          <tr>
+            <td>最大回撤</td>
+            <td class="val down" id="sd_tbl_a_dd">-34.87%</td>
+            <td class="val down" id="sd_tbl_b_dd">-52.44%</td>
+            <td class="val down" id="sd_tbl_p_dd">-43.96%</td>
+            <td class="val down" id="sd_tbl_bh_dd">-43.53%</td>
+          </tr>
+          <tr>
+            <td>回撤发生日</td>
+            <td class="val" id="sd_tbl_a_dd_date">2024-02-02</td>
+            <td class="val" id="sd_tbl_b_dd_date">2024-08-27</td>
+            <td class="val" id="sd_tbl_p_dd_date">2024-02-02</td>
+            <td class="val" id="sd_tbl_bh_dd_date">2024-02-02</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <div class="section">

@@ -83,11 +83,20 @@ def analyze(cfg):
     port_ret = (port / (2 * INIT) - 1) * 100
     bh_ret = (bh / (2 * INIT) - 1) * 100
     port_max_dd = ((port / np.maximum.accumulate(port)) - 1).min() * 100
+    bh_max_dd = ((bh / np.maximum.accumulate(bh)) - 1).min() * 100
+    port_max_dd_idx = int(((port / np.maximum.accumulate(port)) - 1).argmin())
+    bh_max_dd_idx = int(((bh / np.maximum.accumulate(bh)) - 1).argmin())
     p_ret = port_ret[-1]
     p_bh = bh_ret[-1]
+    # 年化收益率 (按 252 交易日/年)
+    a_ann = ((1 + a_ret / 100) ** (252 / n) - 1) * 100
+    b_ann = ((1 + b_ret / 100) ** (252 / n) - 1) * 100
+    p_ann = ((1 + p_ret / 100) ** (252 / n) - 1) * 100
+    bh_ann = ((1 + p_bh / 100) ** (252 / n) - 1) * 100
 
     return {
         'a_ret': a_ret, 'b_ret': b_ret,
+        'a_ann': a_ann, 'b_ann': b_ann,
         'a_min_dd': a_min_dd, 'b_min_dd': b_min_dd,
         'a_min_date': a_min_date, 'b_min_date': b_min_date,
         'a_peak_date': a_peak_date, 'b_peak_date': b_peak_date,
@@ -95,13 +104,18 @@ def analyze(cfg):
         'b_high': b['最高'].max(), 'b_low': b['最低'].min(),
         'a_last': a_close.iloc[-1], 'b_last': b_close.iloc[-1],
         'p_ret': p_ret, 'p_bh': p_bh, 'port_max_dd': port_max_dd,
+        'p_ann': p_ann, 'bh_ann': bh_ann,
+        'bh_max_dd': bh_max_dd,
+        'port_max_dd_date': dates.iloc[port_max_dd_idx].date(),
+        'bh_max_dd_date': dates.iloc[bh_max_dd_idx].date(),
         'port_last': port[-1], 'bh_last': bh[-1],
         'd0': dates.iloc[0].date(), 'd1': dates.iloc[-1].date(), 'n': n,
     }
 
 
 def repl_id(html, el_id, new_value):
-    pat = re.compile(r'(<div [^>]*id="%s"[^>]*>)[^<]*(</div>)' % re.escape(el_id))
+    # 匹配 div 或 td 元素
+    pat = re.compile(r'(<(?:div|td) [^>]*id="%s"[^>]*>)[^<]*(</(?:div|td)>)' % re.escape(el_id))
     return pat.subn(lambda m: m.group(1) + new_value + m.group(2), html)
 
 
@@ -126,21 +140,26 @@ def update_group(html, pfx, cfg, s):
         html2, c = fn(html, el_id, val)
         return html2, c
 
-    # 指标卡数值
-    html, c = repl_id(html, f'{pfx}_stat_a_ret', pct(s['a_ret'])); total += c
-    html, c = repl_id(html, f'{pfx}_stat_b_ret', pct(s['b_ret'])); total += c
-    html, c = repl_id(html, f'{pfx}_stat_a_dd', pct(s['a_min_dd'], False)); total += c
-    html, c = repl_id(html, f'{pfx}_stat_b_dd', pct(s['b_min_dd'], False)); total += c
-    html, c = repl_id(html, f'{pfx}_stat_p_ret', pct(s['p_ret'])); total += c
-    html, c = repl_id(html, f'{pfx}_stat_p_dd', pct(s['port_max_dd'], False)); total += c
-    # 备注
-    html, c = repl_note(html, f'{pfx}_stat_a_dd_note',
-                        f'发生于 {s["a_min_date"]}（峰值 {s["a_peak_date"].strftime("%m-%d")}）'); total += c
-    html, c = repl_note(html, f'{pfx}_stat_b_dd_note',
-                        f'发生于 {s["b_min_date"]}（峰值 {s["b_peak_date"].strftime("%m-%d")}）'); total += c
-    html, c = repl_note(html, f'{pfx}_stat_p_ret_note',
-                        f'超额 {pct(s["p_ret"] - s["p_bh"])} vs 买入持有'); total += c
-    html, c = repl_note(html, f'{pfx}_stat_p_dd_note', '显著低于单基金最大回撤'); total += c
+    # 表格: 区间涨幅
+    html, c = repl_id(html, f'{pfx}_tbl_a_ret', pct(s['a_ret'])); total += c
+    html, c = repl_id(html, f'{pfx}_tbl_b_ret', pct(s['b_ret'])); total += c
+    html, c = repl_id(html, f'{pfx}_tbl_p_ret', pct(s['p_ret'])); total += c
+    html, c = repl_id(html, f'{pfx}_tbl_bh_ret', pct(s['p_bh'])); total += c
+    # 表格: 年化收益率
+    html, c = repl_id(html, f'{pfx}_tbl_a_ann', pct(s['a_ann'])); total += c
+    html, c = repl_id(html, f'{pfx}_tbl_b_ann', pct(s['b_ann'])); total += c
+    html, c = repl_id(html, f'{pfx}_tbl_p_ann', pct(s['p_ann'])); total += c
+    html, c = repl_id(html, f'{pfx}_tbl_bh_ann', pct(s['bh_ann'])); total += c
+    # 表格: 最大回撤
+    html, c = repl_id(html, f'{pfx}_tbl_a_dd', pct(s['a_min_dd'], False)); total += c
+    html, c = repl_id(html, f'{pfx}_tbl_b_dd', pct(s['b_min_dd'], False)); total += c
+    html, c = repl_id(html, f'{pfx}_tbl_p_dd', pct(s['port_max_dd'], False)); total += c
+    html, c = repl_id(html, f'{pfx}_tbl_bh_dd', pct(s['bh_max_dd'], False)); total += c
+    # 表格: 回撤发生日
+    html, c = repl_id(html, f'{pfx}_tbl_a_dd_date', str(s['a_min_date'])); total += c
+    html, c = repl_id(html, f'{pfx}_tbl_b_dd_date', str(s['b_min_date'])); total += c
+    html, c = repl_id(html, f'{pfx}_tbl_p_dd_date', str(s['port_max_dd_date'])); total += c
+    html, c = repl_id(html, f'{pfx}_tbl_bh_dd_date', str(s['bh_max_dd_date'])); total += c
     # 图注
     html, c = repl_cap(html, f'{pfx}_cap_a',
         f'{la}（{ca}）· 区间最高 {s["a_high"]:.3f} / 最低 {s["a_low"]:.3f} · 最新收盘 {s["a_last"]:.3f}'); total += c

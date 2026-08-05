@@ -215,11 +215,22 @@ function backtestRebalance(gRows, vRows, initial = 10000, interval = 10) {
     const dd = (v / peak - 1) * 100;
     if (dd < maxDD) { maxDD = dd; maxDDIdx = i; }
   });
+  // 买入持有最大回撤
+  let peakBH = -Infinity, maxDDBH = 0, maxDDBHIdx = 0;
+  bhValue.forEach((v, i) => {
+    if (v > peakBH) peakBH = v;
+    const dd = (v / peakBH - 1) * 100;
+    if (dd < maxDDBH) { maxDDBH = dd; maxDDBHIdx = i; }
+  });
+  // 年化收益率 (按 252 交易日/年)
+  const ann = (final) => ((1 + final / 100) ** (252 / n) - 1) * 100;
 
   return {
     dates, portRet, bhRet, rebalIdx,
     portValue, bhValue,
     maxDD, maxDDDate: dates[maxDDIdx],
+    maxDDBH, maxDDBHDate: dates[maxDDBHIdx],
+    annPort: ann(portRet[n - 1]), annBH: ann(bhRet[n - 1]),
     finalPort: portRet[n - 1], finalBH: bhRet[n - 1],
   };
 }
