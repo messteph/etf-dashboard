@@ -55,27 +55,45 @@ def _fetch_eastmoney(code, market=0):
 
 def _fetch_tencent(code):
     """腾讯日线 (前复权): 日期,开盘,收盘,最高,最低,成交量
-    注意: 腾讯接口日期参数必须带横线 (YYYY-MM-DD), 否则返回 param error"""
-    start_fmt = f'{START[:4]}-{START[4:6]}-{START[6:]}'
-    end_fmt = f'{END[:4]}-{END[4:6]}-{END[6:]}'
-    url = ('https://web.ifzq.gtimg.cn/appstock/app/fqkline/get'
-           f'?param={_prefix(code)}{code},day,{start_fmt},{end_fmt},400,qfq')
-    r = requests.get(url, timeout=20, headers={'User-Agent': UA,
-                                               'Referer': 'https://gu.qq.com/'})
-    r.raise_for_status()
-    d = r.json()
-    key = f'{_prefix(code)}{code}'
-    node = d.get('data', {})
-    if not isinstance(node, dict):
-        raise ValueError('腾讯接口返回结构异常')
-    rows = (node.get(key, {}) or {}).get('day') or []
-    if not rows:
+    注意: 腾讯接口日期参数必须带横线 (YYYY-MM-DD); qfqday 单次最多约 640 条,
+    因此按半年分段拉取拼接, 覆盖长区间"""
+    segs = _split_segments(START, END)
+    frames = []
+    for seg_start, seg_end in segs:
+        url = ('https://web.ifzq.gtimg.cn/appstock/app/fqkline/get'
+               f'?param={_prefix(code)}{code},day,{seg_start},{seg_end},800,qfq')
+        r = requests.get(url, timeout=20, headers={'User-Agent': UA,
+                                                   'Referer': 'https://gu.qq.com/'})
+        r.raise_for_status()
+        d = r.json()
+        node = d.get('data', {})
+        if not isinstance(node, dict):
+            raise ValueError('腾讯接口返回结构异常')
+        key = f'{_prefix(code)}{code}'
+        sub = node.get(key, {}) or {}
+        # 腾讯结构: 深市用 day, 沪市用 qfqday (前复权)
+        rows = sub.get('day') or sub.get('qfqday') or []
+        if not rows:
+            raise ValueError(f'腾讯接口返回空 ({seg_start})')
+        frames.append(rows)
+        time.sleep(1.5)
+    # 拼接并去重(按日期)
+    seen = set()
+    merged = []
+    for rows in frames:
+        for row in rows:
+            d0 = row[0] if isinstance(row, (list, tuple)) else row.split(',')[0]
+            if d0 not in seen:
+                seen.add(d0)
+                merged.append(row)
+    if not merged:
         raise ValueError('腾讯接口返回空')
-    df = pd.DataFrame(rows).iloc[:, :6]
+    df = pd.DataFrame(merged).iloc[:, :6]
     df.columns = ['日期', '开盘', '收盘', '最高', '最低', '成交量']
     df['日期'] = pd.to_datetime(df['日期'])
     for c in df.columns[1:]:
         df[c] = pd.to_numeric(df[c], errors='coerce')
+    df = df.sort_values('日期').reset_index(drop=True)
     # 计算涨跌幅/成交额等衍生列(与东财格式对齐)
     df['成交额'] = df['成交量'] * df['收盘']
     df['涨跌幅'] = df['收盘'].pct_change() * 100
@@ -87,11 +105,27 @@ def _fetch_tencent(code):
     return df
 
 
+def _split_segments(start_yyyymmdd, end_yyyymmdd):
+    """把 [start, end] 按半年切成多段, 返回 [(YYYY-MM-DD, YYYY-MM-DD), ...]"""
+    from datetime import datetime, timedelta
+    s = datetime.strptime(start_yyyymmdd, '%Y%m%d')
+    e = datetime.strptime(end_yyyymmdd, '%Y%m%d')
+    out = []
+    cur = s
+    while cur < e:
+        nxt = cur + timedelta(days=180)
+        if nxt > e:
+            nxt = e
+        out.append((cur.strftime('%Y-%m-%d'), nxt.strftime('%Y-%m-%d')))
+        cur = nxt + timedelta(days=1)
+    return out
+
+
 def _fetch_sina(code):
     """新浪日线 (不复权): 日期,开盘,最高,最低,收盘,成交量"""
     url = ('https://quotes.sina.cn/cn/api/jsonp_v2.php/var%20t=/'
            f'CN_MarketDataService.getKLineData?symbol={_prefix(code)}{code}'
-           '&scale=240&ma=no&datalen=400')
+           '&scale=240&ma=no&datalen=2000')
     r = requests.get(url, timeout=20, headers={'User-Agent': UA,
                                                'Referer': 'https://finance.sina.com.cn/'})
     r.raise_for_status()
@@ -130,7 +164,15 @@ SOURCES = [
 ]
 
 
+# 基金组配置: 组名 -> [(代码, 起始日期), ...]
+PAIRS = {
+    'growth_value': [('159259', '20250901'), ('159263', '20250901')],
+    'sm500_dividend': [('510500', '20220101'), ('515080', '20220101')],
+}
+
+
 def fetch(code):
+    """拉取单只 ETF, 起始日期取全局 START (由 main 按组设置)"""
     last_err = None
     for name, fn in SOURCES:
         for attempt in range(3):
@@ -148,9 +190,19 @@ def fetch(code):
     raise RuntimeError(f'拉取 {code} 数据失败, 全部源不可用: {last_err}')
 
 
-for code in ['159259', '159263']:
-    df = fetch(code)
-    path = os.path.join(DATA_DIR, f'etf_{code}.csv')
-    df.to_csv(path, index=False)
-    print(f'[{code}] saved -> {path}')
-    time.sleep(8)
+def main():
+    # 支持命令行指定: python fetch_data.py [组名] [组名...] (默认全部)
+    groups = sys.argv[1:] if len(sys.argv) > 1 else list(PAIRS.keys())
+    for grp in groups:
+        for code, start in PAIRS.get(grp, []):
+            global START
+            START = start
+            df = fetch(code)
+            path = os.path.join(DATA_DIR, f'etf_{code}.csv')
+            df.to_csv(path, index=False)
+            print(f'[{code}] saved -> {path}')
+            time.sleep(8)
+
+
+if __name__ == '__main__':
+    main()

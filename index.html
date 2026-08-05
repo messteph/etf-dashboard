@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>成长ETF vs 价值ETF — 走势与最大回撤分析（实时）</title>
+<title>ETF 风格对比分析 — 成长/价值 & 中证500/红利</title>
 <style>
   :root {
     --growth: #e0522a;
@@ -28,20 +28,37 @@
   .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px 60px; }
 
   /* Header */
-  header { text-align: center; padding: 40px 0 28px; }
+  header { text-align: center; padding: 40px 0 24px; }
   header .kicker {
     display: inline-block; font-size: 13px; letter-spacing: 2px; color: var(--sub);
     background: #eef1f6; padding: 4px 14px; border-radius: 999px; margin-bottom: 16px;
   }
-  header h1 { font-size: 30px; font-weight: 800; letter-spacing: 0.5px; }
-  header p { color: var(--sub); margin-top: 10px; font-size: 15px; }
+  header h1 { font-size: 28px; font-weight: 800; letter-spacing: 0.5px; }
+  header p { color: var(--sub); margin-top: 8px; font-size: 14px; }
 
   /* Live banner */
   #live-banner {
     display: none; text-align: center; font-size: 13px; padding: 8px 16px;
-    border-radius: 999px; margin: 0 auto 8px; max-width: 560px;
+    border-radius: 999px; margin: 14px auto 0; max-width: 620px;
     background: #eefdf3; color: #15803d; border: 1px solid #bbf7d0;
   }
+
+  /* Tabs */
+  .tabs {
+    display: flex; justify-content: center; gap: 10px; margin: 28px 0 8px;
+  }
+  .tab-btn {
+    padding: 10px 26px; font-size: 15px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--border); border-radius: 999px; background: var(--card);
+    color: var(--sub); transition: all .2s;
+  }
+  .tab-btn:hover { border-color: #cbd5e1; color: var(--text); }
+  .tab-btn.active {
+    background: #0f172a; color: #fff; border-color: #0f172a;
+    box-shadow: 0 2px 8px rgba(15,23,42,.18);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
 
   /* Stats row */
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 28px 0 8px; }
@@ -55,8 +72,12 @@
   .up { color: var(--growth); }
   .down { color: var(--dd); }
   .blue { color: var(--value); }
-  .stat.growth { border-top: 3px solid var(--growth); }
-  .stat.value { border-top: 3px solid var(--value); }
+  .green { color: #059669; }
+  .amber { color: #d97706; }
+  .stat.a1 { border-top: 3px solid var(--growth); }
+  .stat.a2 { border-top: 3px solid var(--value); }
+  .stat.s1 { border-top: 3px solid #059669; }
+  .stat.s2 { border-top: 3px solid #d97706; }
 
   /* Sections */
   .section { margin-top: 40px; }
@@ -64,8 +85,6 @@
     display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 800; margin-bottom: 6px;
   }
   .section-title .dot { width: 10px; height: 10px; border-radius: 3px; }
-  .dot.growth { background: var(--growth); }
-  .dot.value { background: var(--value); }
   .dot.gray { background: #94a3b8; }
   .section-desc { color: var(--sub); font-size: 14px; margin-bottom: 18px; }
 
@@ -86,6 +105,8 @@
   .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
   .legend .lg { background: var(--growth); }
   .legend .lv { background: var(--value); }
+  .legend .l500 { background: #059669; }
+  .legend .lred { background: #d97706; }
   .legend .lp { background: #7c3aed; }
   .legend .lb { background: #94a3b8; }
 
@@ -106,7 +127,7 @@
   @media (max-width: 820px) {
     .stats { grid-template-columns: repeat(2, 1fr); }
     .chart-grid { grid-template-columns: 1fr; }
-    header h1 { font-size: 24px; }
+    header h1 { font-size: 21px; }
     .chart-box, .chart-box.tall { height: 320px; }
   }
 </style>
@@ -115,123 +136,236 @@
 <div class="container">
 
   <header>
-    <div class="kicker">ETF 对比分析 · 实时数据</div>
-    <h1>成长ETF（159259）vs 价值ETF（159263）</h1>
-    <p id="data_range">数据区间：2025-09-01 ~ 2026-08-05（224 个交易日）· 打开页面时实时更新</p>
+    <div class="kicker">ETF 风格对比分析 · 实时数据</div>
+    <h1>成长/价值 vs 中证500/红利 — 走势、回撤与再平衡策略</h1>
+    <p>打开页面时自动更新最新数据 · 多数据源容错（东财 / 腾讯 / 新浪）</p>
     <div id="live-banner"></div>
   </header>
 
-  <!-- 核心指标 -->
-  <div class="stats">
-    <div class="stat growth">
-      <div class="label">成长ETF 区间涨幅</div>
-      <div class="value up" id="stat_g_ret">+12.57%</div>
-      <div class="note">2025-09-01 起</div>
-    </div>
-    <div class="stat value">
-      <div class="label">价值ETF 区间涨幅</div>
-      <div class="value blue" id="stat_v_ret">+11.23%</div>
-      <div class="note">2025-09-01 起</div>
-    </div>
-    <div class="stat growth">
-      <div class="label">成长ETF 最大回撤</div>
-      <div class="value down" id="stat_g_dd">-37.68%</div>
-      <div class="note" id="stat_g_dd_note">发生于 2026-07-30（峰值 06-22）</div>
-    </div>
-    <div class="stat value">
-      <div class="label">价值ETF 最大回撤</div>
-      <div class="value down" id="stat_v_dd">-16.56%</div>
-      <div class="note" id="stat_v_dd_note">发生于 2026-06-30（峰值 03-12）</div>
-    </div>
-    <div class="stat growth">
-      <div class="label">50/50 再平衡组合收益</div>
-      <div class="value up" id="stat_p_ret" style="color:var(--growth)">+14.79%</div>
-      <div class="note" id="stat_p_ret_note">超额 +2.88% vs 买入持有</div>
-    </div>
-    <div class="stat value">
-      <div class="label">再平衡组合最大回撤</div>
-      <div class="value down" id="stat_p_dd">-16.83%</div>
-      <div class="note" id="stat_p_dd_note">显著低于纯成长 ETF</div>
-    </div>
+  <!-- 选项卡 -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="gv" id="tab-gv">成长 vs 价值（159259 / 159263）</button>
+    <button class="tab-btn" data-tab="sd" id="tab-sd">中证500 vs 红利（510500 / 515080）</button>
   </div>
 
-  <!-- 走势图 -->
-  <div class="section">
-    <div class="section-title"><span class="dot gray"></span>走势图</div>
-    <div class="section-desc">净值走势与 20 日均线（MA20），数据为前复权。打开页面时自动拉取最新数据。</div>
-    <div class="chart-grid">
-      <div class="chart-card">
-        <div id="chart-g-trend" class="chart-box"></div>
-        <div class="cap" id="cap_g">成长ETF（159259）· 区间最高 1.827 / 最低 0.871 · 最新收盘 1.182</div>
+  <!-- ============ 选项卡1: 成长 vs 价值 ============ -->
+  <div class="tab-panel active" id="panel-gv">
+    <p class="section-desc" id="gv_range" style="margin-top:16px">数据区间：2025-09-01 起</p>
+
+    <div class="stats">
+      <div class="stat a1">
+        <div class="label">成长ETF 区间涨幅</div>
+        <div class="value up" id="gv_stat_a_ret">+12.57%</div>
+        <div class="note">2025-09-01 起</div>
       </div>
-      <div class="chart-card">
-        <div id="chart-v-trend" class="chart-box"></div>
-        <div class="cap" id="cap_v">价值ETF（159263）· 区间最高 1.247 / 最低 0.999 · 最新收盘 1.149</div>
+      <div class="stat a2">
+        <div class="label">价值ETF 区间涨幅</div>
+        <div class="value blue" id="gv_stat_b_ret">+11.23%</div>
+        <div class="note">2025-09-01 起</div>
       </div>
-      <div class="chart-card chart-full">
-        <div class="legend">
-          <span><i class="lg"></i>成长ETF（159259）</span>
-          <span><i class="lv"></i>价值ETF（159263）</span>
+      <div class="stat a1">
+        <div class="label">成长ETF 最大回撤</div>
+        <div class="value down" id="gv_stat_a_dd">-37.68%</div>
+        <div class="note" id="gv_stat_a_dd_note">发生于 2026-07-30（峰值 06-22）</div>
+      </div>
+      <div class="stat a2">
+        <div class="label">价值ETF 最大回撤</div>
+        <div class="value down" id="gv_stat_b_dd">-16.56%</div>
+        <div class="note" id="gv_stat_b_dd_note">发生于 2026-06-30（峰值 03-12）</div>
+      </div>
+      <div class="stat a1">
+        <div class="label">50/50 再平衡组合收益</div>
+        <div class="value up" id="gv_stat_p_ret" style="color:var(--growth)">+14.79%</div>
+        <div class="note" id="gv_stat_p_ret_note">超额 +2.88% vs 买入持有</div>
+      </div>
+      <div class="stat a2">
+        <div class="label">再平衡组合最大回撤</div>
+        <div class="value down" id="gv_stat_p_dd">-16.83%</div>
+        <div class="note" id="gv_stat_p_dd_note">显著低于单基金最大回撤</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="dot gray"></span>走势图</div>
+      <div class="section-desc">净值走势与 20 日均线（MA20），数据为前复权。</div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div id="chart-gv-a-trend" class="chart-box"></div>
+          <div class="cap" id="gv_cap_a">成长ETF（159259）· 区间最高 1.827 / 最低 0.871 · 最新收盘 1.182</div>
         </div>
-        <div id="chart-compare" class="chart-box tall"></div>
-        <div class="cap">起点归一化为 100 的对比走势——直观呈现两只基金在相同时间窗口内的相对强弱。</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 最大回撤 -->
-  <div class="section">
-    <div class="section-title"><span class="dot gray"></span>最大回撤走势</div>
-    <div class="section-desc">水下曲线（Underwater Curve）：净值相对历史峰值回撤的百分比。</div>
-    <div class="chart-grid">
-      <div class="chart-card">
-        <div id="chart-g-dd" class="chart-box"></div>
-        <div class="cap">成长ETF 最大回撤 -37.68%：6 月下旬见顶后连续回调，波动显著高于价值。</div>
-      </div>
-      <div class="chart-card">
-        <div id="chart-v-dd" class="chart-box"></div>
-        <div class="cap">价值ETF 最大回撤 -16.56%：回撤深度约为成长 ETF 的一半，走势更平稳。</div>
-      </div>
-      <div class="chart-card chart-full">
-        <div class="legend">
-          <span><i class="lg"></i>成长ETF 回撤</span>
-          <span><i class="lv"></i>价值ETF 回撤</span>
+        <div class="chart-card">
+          <div id="chart-gv-b-trend" class="chart-box"></div>
+          <div class="cap" id="gv_cap_b">价值ETF（159263）· 区间最高 1.247 / 最低 0.999 · 最新收盘 1.149</div>
         </div>
-        <div id="chart-compare-dd" class="chart-box tall"></div>
-        <div class="cap">回撤对比：成长风格在下跌市中回撤更深，价值风格防御性更强。</div>
+        <div class="chart-card chart-full">
+          <div class="legend">
+            <span><i class="lg"></i>成长ETF（159259）</span>
+            <span><i class="lv"></i>价值ETF（159263）</span>
+          </div>
+          <div id="chart-gv-compare" class="chart-box tall"></div>
+          <div class="cap">起点归一化为 100 的对比走势——直观呈现两只基金在相同时间窗口内的相对强弱。</div>
+        </div>
       </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="dot gray"></span>最大回撤走势</div>
+      <div class="section-desc">水下曲线（Underwater Curve）：净值相对历史峰值回撤的百分比。</div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div id="chart-gv-a-dd" class="chart-box"></div>
+          <div class="cap">成长ETF 最大回撤 -37.68%：6 月下旬见顶后连续回调，波动显著高于价值。</div>
+        </div>
+        <div class="chart-card">
+          <div id="chart-gv-b-dd" class="chart-box"></div>
+          <div class="cap">价值ETF 最大回撤 -16.56%：回撤深度约为成长 ETF 的一半，走势更平稳。</div>
+        </div>
+        <div class="chart-card chart-full">
+          <div class="legend">
+            <span><i class="lg"></i>成长ETF 回撤</span>
+            <span><i class="lv"></i>价值ETF 回撤</span>
+          </div>
+          <div id="chart-gv-compare-dd" class="chart-box tall"></div>
+          <div class="cap">回撤对比：成长风格在下跌市中回撤更深，价值风格防御性更强。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="dot" style="background:#7c3aed"></span>50/50 定期再平衡策略回测</div>
+      <div class="section-desc">
+        假设起始日两只基金各投入 10,000 元，每两周（10 个交易日）再平衡一次：
+        卖出权重超标的一方、买入净值较低的一方，使二者恢复 50% : 50% 比例。紫色实线为组合合计收益率，灰色虚线为买入持有对照，浅紫竖线为再平衡时点。
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card chart-full">
+          <div id="chart-gv-rebal" class="chart-box tall"></div>
+          <div class="cap" id="gv_cap_rebal">回测结果：再平衡组合 +14.79%（22,957.07 元），买入持有 +11.90%（22,380.09 元），超额 +2.88% 个百分点；组合最大回撤 -16.83%，介于 成长ETF（-37.68%）与 价值ETF（-16.56%）之间。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <h3>📌 对比小结</h3>
+      <ul>
+        <li><b>收益</b>：成长ETF 与价值ETF 区间涨幅接近，成长略占优。</li>
+        <li><b>风险</b>：成长ETF 最大回撤约为价值ETF 的 2.3 倍，波动显著更高。</li>
+        <li><b>再平衡</b>：50/50 每两周再平衡跑赢买入持有，且把组合最大回撤压到接近纯价值水平——震荡市中"低买高卖"同时增厚收益、降低波动。</li>
+        <li><b>结论</b>：成长进攻性强但波动剧烈，价值回撤可控、持有体验更稳；两者按 50/50 定期再平衡可在收益与回撤间取得较好平衡。</li>
+      </ul>
     </div>
   </div>
 
-  <!-- 再平衡策略 -->
-  <div class="section">
-    <div class="section-title"><span class="dot" style="background:#7c3aed"></span>50/50 定期再平衡策略回测</div>
-    <div class="section-desc">
-      假设 2025-09-01 两只基金各投入 10,000 元，每两周（10 个交易日）再平衡一次：
-      卖出权重超标的一方、买入净值较低的一方，使二者恢复 50% : 50% 比例。紫色实线为组合合计收益率，灰色虚线为买入持有（不操作）对照，浅紫竖线为再平衡时点。
-    </div>
-    <div class="chart-grid">
-      <div class="chart-card chart-full">
-        <div id="chart-rebal" class="chart-box tall"></div>
-        <div class="cap" id="cap_rebal">回测结果：再平衡组合 +14.79%（22,957.07 元），买入持有 +11.90%（22,380.09 元），超额 +2.88% 个百分点；组合最大回撤 -16.83%，介于纯成长（-37.68%）与纯价值（-16.56%）之间，接近价值水平。</div>
+  <!-- ============ 选项卡2: 中证500 vs 红利 ============ -->
+  <div class="tab-panel" id="panel-sd">
+    <p class="section-desc" id="sd_range" style="margin-top:16px">数据区间：2022-01-01 起</p>
+
+    <div class="stats">
+      <div class="stat s1">
+        <div class="label">中证500ETF 区间涨幅</div>
+        <div class="value green" id="sd_stat_a_ret">+11.34%</div>
+        <div class="note">2022-01-01 起</div>
+      </div>
+      <div class="stat s2">
+        <div class="label">中证红利ETF 区间涨幅</div>
+        <div class="value amber" id="sd_stat_b_ret">+32.76%</div>
+        <div class="note">2022-01-01 起</div>
+      </div>
+      <div class="stat s1">
+        <div class="label">中证500ETF 最大回撤</div>
+        <div class="value down" id="sd_stat_a_dd">-39.27%</div>
+        <div class="note" id="sd_stat_a_dd_note">发生于 2024-02-05（峰值 01-04）</div>
+      </div>
+      <div class="stat s2">
+        <div class="label">中证红利ETF 最大回撤</div>
+        <div class="value down" id="sd_stat_b_dd">-16.08%</div>
+        <div class="note" id="sd_stat_b_dd_note">发生于 2022-03-15（峰值 02-21）</div>
+      </div>
+      <div class="stat s1">
+        <div class="label">50/50 再平衡组合收益</div>
+        <div class="value green" id="sd_stat_p_ret" style="color:#059669">+24.24%</div>
+        <div class="note" id="sd_stat_p_ret_note">超额 +2.19% vs 买入持有</div>
+      </div>
+      <div class="stat s2">
+        <div class="label">再平衡组合最大回撤</div>
+        <div class="value down" id="sd_stat_p_dd">-21.25%</div>
+        <div class="note" id="sd_stat_p_dd_note">显著低于单基金最大回撤</div>
       </div>
     </div>
-  </div>
 
-  <!-- 要点小结 -->
-  <div class="callout">
-    <h3>📌 对比小结（2025-09-01 起）</h3>
-    <ul>
-      <li><b>收益</b>：成长ETF 区间涨幅 +12.57%，领先价值ETF 的 +11.23%。</li>
-      <li><b>风险</b>：成长ETF 最大回撤 -37.68%，约为价值ETF（-16.56%）的 2.3 倍；年化波动率约 51% vs 17%。</li>
-      <li><b>再平衡</b>：50/50 每两周再平衡组合收益 +14.79%，跑赢买入持有（+11.90%），且最大回撤收窄至 -16.83%——在震荡市中既吃到成长反弹，又通过"低买高卖"降低波动。</li>
-      <li><b>节奏</b>：价值ETF 于 3 月见顶、回撤时间早；成长ETF 于 6 月下旬见顶、7 月快速深调（单日多次 ±8% 以上）。</li>
-      <li><b>结论</b>：成长风格进攻性强但波动剧烈，价值风格回撤可控、持有体验更稳；两者按 50/50 定期再平衡，可在收益与回撤间取得较好平衡。</li>
-    </ul>
+    <div class="section">
+      <div class="section-title"><span class="dot gray"></span>走势图</div>
+      <div class="section-desc">净值走势与 20 日均线（MA20），数据为前复权。</div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div id="chart-sd-a-trend" class="chart-box"></div>
+          <div class="cap" id="sd_cap_a">中证500ETF南方（510500）· 区间最高 9.156 / 最低 3.962 · 最新收盘 7.601</div>
+        </div>
+        <div class="chart-card">
+          <div id="chart-sd-b-trend" class="chart-box"></div>
+          <div class="cap" id="sd_cap_b">中证红利ETF招商（515080）· 区间最高 1.662 / 最低 0.986 · 最新收盘 1.548</div>
+        </div>
+        <div class="chart-card chart-full">
+          <div class="legend">
+            <span><i class="l500"></i>中证500ETF南方（510500）</span>
+            <span><i class="lred"></i>中证红利ETF招商（515080）</span>
+          </div>
+          <div id="chart-sd-compare" class="chart-box tall"></div>
+          <div class="cap">起点归一化为 100 的对比走势——红利风格长期稳步跑赢中证500。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="dot gray"></span>最大回撤走势</div>
+      <div class="section-desc">水下曲线（Underwater Curve）：净值相对历史峰值回撤的百分比。</div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div id="chart-sd-a-dd" class="chart-box"></div>
+          <div class="cap">中证500ETF 最大回撤 -39.27%：2024 年初微盘股流动性危机期间深调。</div>
+        </div>
+        <div class="chart-card">
+          <div id="chart-sd-b-dd" class="chart-box"></div>
+          <div class="cap">中证红利ETF 最大回撤 -16.08%：防御属性突出，回撤远小于宽基指数。</div>
+        </div>
+        <div class="chart-card chart-full">
+          <div class="legend">
+            <span><i class="l500"></i>中证500ETF 回撤</span>
+            <span><i class="lred"></i>中证红利ETF 回撤</span>
+          </div>
+          <div id="chart-sd-compare-dd" class="chart-box tall"></div>
+          <div class="cap">回撤对比：红利风格在历次下跌中回撤均显著小于中证500。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="dot" style="background:#7c3aed"></span>50/50 定期再平衡策略回测</div>
+      <div class="section-desc">
+        假设起始日两只基金各投入 10,000 元，每两周（10 个交易日）再平衡一次：
+        卖出权重超标的一方、买入净值较低的一方，使二者恢复 50% : 50% 比例。
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card chart-full">
+          <div id="chart-sd-rebal" class="chart-box tall"></div>
+          <div class="cap" id="sd_cap_rebal">回测结果：再平衡组合 +24.24%（24,847.83 元），买入持有 +22.05%（24,409.89 元），超额 +2.19% 个百分点；组合最大回撤 -21.25%，介于 中证500ETF南方（-39.27%）与 中证红利ETF招商（-16.08%）之间。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <h3>📌 对比小结（2022-01-01 起，约 4.6 年）</h3>
+      <ul>
+        <li><b>收益</b>：中证红利ETF 区间涨幅 +32.76%，显著跑赢中证500ETF 的 +11.34%——红利低波策略在中长期有稳定超额。</li>
+        <li><b>风险</b>：中证500ETF 最大回撤 -39.27%（2024-02 微盘股流动性危机），红利ETF 仅 -16.08%（2022-03 俄乌冲击），防御性突出。</li>
+        <li><b>再平衡</b>：50/50 每两周再平衡 +24.24%，跑赢买入持有（+22.05%），组合最大回撤 -21.25%，介于两者之间。</li>
+        <li><b>结论</b>：红利风格适合作为底仓长期持有；加入中证500 并定期再平衡，可在保留部分弹性（博取 2024/2025 反弹）的同时控制整体回撤。</li>
+      </ul>
+    </div>
   </div>
 
   <footer>
-    数据来源：东方财富（实时 JSONP 接口，前复权）· 统计区间 2025-09-01 ~ 2026-08-05 · 打开页面时自动更新<br>
+    数据来源：东方财富 / 腾讯 / 新浪（实时多源，前复权）· 打开页面时自动更新 · 每日 16:00 静态图定时更新<br>
     本页面仅供研究参考，不构成任何投资建议。
   </footer>
 

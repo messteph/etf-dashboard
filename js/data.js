@@ -59,29 +59,48 @@ function fetchFromEastmoney(etf, startDate, endDate) {
   });
 }
 
-/** 源2: 腾讯 fetch (CORS *, 日期参数需带横线) */
+/** 源2: 腾讯 fetch (CORS *, 日期参数需带横线; qfqday 单次约 640 条上限, 分段拉取拼接) */
 async function fetchFromTencent(etf, startDate, endDate) {
   const prefix = etf.code.startsWith('159') ? 'sz' : 'sh';
-  const fmt = (d) => d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6, 8);
-  const url = `${TX_URL}?param=${prefix}${etf.code},day,${fmt(startDate)},${fmt(endDate)},400,qfq`;
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 15000);
-  let resp;
-  try {
-    resp = await fetch(url, { signal: ctrl.signal, headers: { 'Accept': 'application/json' } });
-  } finally { clearTimeout(t); }
-  if (!resp.ok) throw new Error('腾讯 HTTP ' + resp.status);
-  const json = await resp.json();
-  const node = json && json.data;
-  if (!node || typeof node !== 'object') throw new Error('腾讯数据为空');
-  const key = prefix + etf.code;
-  const rows = (node[key] || {}).day || [];
-  if (!rows.length) throw new Error('腾讯 kline 为空');
-  return rows.map((r) => {
-    // 腾讯可能返回字符串 "date,open,close,high,low,volume" 或数组
-    const p = typeof r === 'string' ? r.split(',') : r;
-    return { date: p[0], open: p[1], close: p[2], high: p[3], low: p[4], volume: p[5] };
-  }).map(normRow);
+  const fmtD = (y, m, d) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  // 按 180 天分段
+  const sy = +startDate.slice(0, 4), sm = +startDate.slice(4, 6), sd = +startDate.slice(6, 8);
+  const ey = +endDate.slice(0, 4), em = +endDate.slice(4, 6), ed = +endDate.slice(6, 8);
+  const segs = [];
+  let cur = new Date(sy, sm - 1, sd);
+  const endD = new Date(ey, em - 1, ed);
+  while (cur <= endD) {
+    const nxt = new Date(cur.getTime() + 180 * 86400000);
+    const e2 = nxt > endD ? endD : nxt;
+    segs.push([fmtD(cur.getFullYear(), cur.getMonth() + 1, cur.getDate()),
+               fmtD(e2.getFullYear(), e2.getMonth() + 1, e2.getDate())]);
+    cur = new Date(e2.getTime() + 86400000);
+  }
+  const seen = new Set();
+  const merged = [];
+  for (const [ss, se] of segs) {
+    const url = `${TX_URL}?param=${prefix}${etf.code},day,${ss},${se},800,qfq`;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    let resp;
+    try {
+      resp = await fetch(url, { signal: ctrl.signal, headers: { 'Accept': 'application/json' } });
+    } finally { clearTimeout(t); }
+    if (!resp.ok) throw new Error('腾讯 HTTP ' + resp.status);
+    const json = await resp.json();
+    const node = json && json.data;
+    if (!node || typeof node !== 'object') throw new Error('腾讯数据为空');
+    const key = prefix + etf.code;
+    const node2 = node[key] || {};
+    // 腾讯结构: 深市用 day, 沪市用 qfqday (前复权)
+    const rows = node2.day || node2.qfqday || [];
+    for (const r of rows) {
+      const p = typeof r === 'string' ? r.split(',') : r;
+      if (!seen.has(p[0])) { seen.add(p[0]); merged.push(p); }
+    }
+  }
+  if (!merged.length) throw new Error('腾讯 kline 为空');
+  return merged.map((p) => ({ date: p[0], open: p[1], close: p[2], high: p[3], low: p[4], volume: p[5] })).map(normRow);
 }
 
 /** 源3: 新浪 JSONP (返回 var t=([...]) 格式, 用 script 加载后解析) */
@@ -89,7 +108,7 @@ function fetchFromSina(etf, startDate, endDate) {
   return new Promise((resolve, reject) => {
     const prefix = etf.code.startsWith('159') ? 'sz' : 'sh';
     const cb = 'sina_cb_' + Math.random().toString(36).slice(2, 10);
-    const url = `${SINA_URL}?symbol=${prefix}${etf.code}&scale=240&ma=no&datalen=500&cb=${cb}`;
+    const url = `${SINA_URL}?symbol=${prefix}${etf.code}&scale=240&ma=no&datalen=2000&cb=${cb}`;
     const script = document.createElement('script');
     const timeoutId = setTimeout(() => {
       window[cb] = undefined; script.remove();
@@ -103,8 +122,9 @@ function fetchFromSina(etf, startDate, endDate) {
       window.t = undefined;
       if (!Array.isArray(raw) || !raw.length) { reject(new Error('新浪数据为空')); return; }
       try {
+        const fmtD = (d) => d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6, 8);
         const rows = raw
-          .filter((r) => r.day >= startDate)
+          .filter((r) => r.day >= fmtD(startDate))
           .map((r) => ({ date: r.day, open: r.open, close: r.close, high: r.high, low: r.low, volume: r.volume }))
           .map(normRow);
         if (!rows.length) { reject(new Error('新浪数据范围为空')); return; }
