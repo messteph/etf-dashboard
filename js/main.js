@@ -76,16 +76,16 @@
         String(now.getMonth() + 1).padStart(2, '0') +
         String(now.getDate()).padStart(2, '0');
 
-      const [gData, vData] = await Promise.all([
+      const [gRows0, vRows0] = await Promise.all([
         fetchEtfDaily(ETF_GROWTH, START_DATE, endDate),
         fetchEtfDaily(ETF_VALUE, START_DATE, endDate),
       ]);
-      if (gData.rows.length < 2 || vData.rows.length < 2) throw new Error('数据不足');
+      if (gRows0.length < 2 || vRows0.length < 2) throw new Error('数据不足');
 
       // 对齐到共同交易日
-      const gMap = new Map(gData.rows.map((r) => [r.date, r]));
-      const vMap = new Map(vData.rows.map((r) => [r.date, r]));
-      const commonDates = gData.rows.map((r) => r.date).filter((d) => vMap.has(d));
+      const gMap = new Map(gRows0.map((r) => [r.date, r]));
+      const vMap = new Map(vRows0.map((r) => [r.date, r]));
+      const commonDates = gRows0.map((r) => r.date).filter((d) => vMap.has(d));
       const gRows = commonDates.map((d) => gMap.get(d));
       const vRows = commonDates.map((d) => vMap.get(d));
 

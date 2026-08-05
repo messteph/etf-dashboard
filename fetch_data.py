@@ -54,9 +54,12 @@ def _fetch_eastmoney(code, market=0):
 
 
 def _fetch_tencent(code):
-    """腾讯日线 (前复权): 日期,开盘,收盘,最高,最低,成交量"""
+    """腾讯日线 (前复权): 日期,开盘,收盘,最高,最低,成交量
+    注意: 腾讯接口日期参数必须带横线 (YYYY-MM-DD), 否则返回 param error"""
+    start_fmt = f'{START[:4]}-{START[4:6]}-{START[6:]}'
+    end_fmt = f'{END[:4]}-{END[4:6]}-{END[6:]}'
     url = ('https://web.ifzq.gtimg.cn/appstock/app/fqkline/get'
-           f'?param={_prefix(code)}{code},day,{START},{END},400,qfq')
+           f'?param={_prefix(code)}{code},day,{start_fmt},{end_fmt},400,qfq')
     r = requests.get(url, timeout=20, headers={'User-Agent': UA,
                                                'Referer': 'https://gu.qq.com/'})
     r.raise_for_status()
