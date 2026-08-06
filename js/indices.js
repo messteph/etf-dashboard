@@ -10,8 +10,8 @@
   const START_DATE = '20220101';
 
   const INDICES = [
-    { code: '000300', name: '沪深300', color: '#e0522a' },
-    { code: '000905', name: '中证500', color: '#2563eb' },
+    { code: '000300', name: '沪深300', color: '#1d4ed8' },
+    { code: '000905', name: '中证500', color: '#0ea5e9' },
     { code: '000510', name: '中证A500', color: '#059669' },
     { code: '000852', name: '中证1000', color: '#d97706' },
     { code: '000922', name: '中证红利', color: '#dc2626' },
