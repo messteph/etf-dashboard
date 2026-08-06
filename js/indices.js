@@ -265,6 +265,117 @@
     window.addEventListener('resize', () => chart && chart.resize());
   }
 
+  /* ---------- 双指数相对走势图 (归一化相对强弱, 起点=100) ---------- */
+  let relChart = null;
+  let relZoomStart = 0, relZoomEnd = 0;
+
+  function initRelPicker() {
+    const selA = document.getElementById('rel-a');
+    const selB = document.getElementById('rel-b');
+    INDICES.forEach((idx) => {
+      const o1 = document.createElement('option');
+      o1.value = idx.code; o1.textContent = `${idx.name} (${idx.code})`;
+      selA.appendChild(o1);
+      const o2 = document.createElement('option');
+      o2.value = idx.code; o2.textContent = `${idx.name} (${idx.code})`;
+      selB.appendChild(o2);
+    });
+    selA.value = '000300';   // 默认沪深300
+    selB.value = '000905';   // 默认中证500
+    selA.addEventListener('change', () => { relZoomStart = 0; relZoomEnd = allDates.length - 1; renderRelChart(); });
+    selB.addEventListener('change', () => { relZoomStart = 0; relZoomEnd = allDates.length - 1; renderRelChart(); });
+  }
+
+  /** 归一化相对强弱: RS = (A/A0) / (B/B0) * 100 */
+  function renderRelChart() {
+    const codeA = document.getElementById('rel-a').value;
+    const codeB = document.getElementById('rel-b').value;
+    const idxA = INDICES.find((i) => i.code === codeA);
+    const idxB = INDICES.find((i) => i.code === codeB);
+    const closesA = seriesCache[codeA];
+    const closesB = seriesCache[codeB];
+
+    // 起点: 两者都有数据的第一个交易日
+    let base = -1;
+    for (let i = 0; i < allDates.length; i++) {
+      if (closesA[i] != null && closesB[i] != null) { base = i; break; }
+    }
+    if (base < 0) return;
+    const a0 = closesA[base], b0 = closesB[base];
+
+    const rs = allDates.map((_, i) => {
+      if (closesA[i] == null || closesB[i] == null) return null;
+      return +(((closesA[i] / a0) / (closesB[i] / b0)) * 100).toFixed(2);
+    });
+
+    if (!relChart) relChart = echarts.init(document.getElementById('chart-rel'));
+    relChart.setOption({
+      title: {
+        text: `${idxA.name} vs ${idxB.name} 相对走势（归一化相对强弱，起点 = 100）`,
+        left: 4, top: 2, textStyle: { fontSize: 14, fontWeight: 'bold', color: '#1e293b' },
+      },
+      tooltip: {
+        trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0',
+        textStyle: { color: '#1e293b', fontSize: 12 }, axisPointer: { type: 'cross' },
+        formatter: (params) => {
+          const p = params[0];
+          if (!p || p.value == null) return '';
+          const over = p.value - 100;
+          const dir = over >= 0 ? '走强' : '走弱';
+          return `${p.axisValue}<br><b style="color:#7c3aed">RS ${p.value.toFixed(2)}</b><br>相对基准 ${over >= 0 ? '+' : ''}${over.toFixed(2)}（${idxA.name} ${dir}）`;
+        },
+      },
+      grid: { left: 60, right: 24, top: 44, bottom: 70 },
+      xAxis: {
+        type: 'category', data: allDates, boundaryGap: false,
+        axisLine: { lineStyle: { color: '#e8ecf1' } },
+        axisLabel: { color: '#64748b', fontSize: 10 }, axisTick: { show: false },
+      },
+      yAxis: {
+        type: 'value', scale: true,
+        splitLine: { lineStyle: { color: '#e8ecf1' } },
+        axisLabel: { color: '#64748b', fontSize: 10, formatter: (v) => v.toFixed(0) },
+      },
+      dataZoom: [
+        { type: 'inside', start: relZoomStart, end: relZoomEnd, zoomOnMouseWheel: true, moveOnMouseMove: true },
+        { type: 'slider', start: relZoomStart, end: relZoomEnd, bottom: 10, height: 22,
+          borderColor: '#e2e8f0', fillerColor: 'rgba(124,58,237,0.12)',
+          handleStyle: { color: '#7c3aed' }, textStyle: { color: '#64748b', fontSize: 10 },
+          dataBackground: { lineStyle: { color: '#cbd5e1' }, areaStyle: { color: '#eef2f7' } } },
+      ],
+      series: [{
+        name: `${idxA.name}/${idxB.name} RS`,
+        type: 'line', data: rs, smooth: true, showSymbol: false, connectNulls: false,
+        lineStyle: { width: 2.4, color: '#7c3aed' }, itemStyle: { color: '#7c3aed' },
+        areaStyle: {
+          color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [{ offset: 0, color: 'rgba(124,58,237,0.25)' }, { offset: 1, color: 'rgba(124,58,237,0.02)' }] },
+        },
+        markLine: {
+          silent: true, symbol: 'none',
+          lineStyle: { color: '#94a3b8', type: 'dashed', width: 1 },
+          data: [{ yAxis: 100, label: { formatter: '基准 100', color: '#94a3b8', fontSize: 10, position: 'insideEndTop' } }],
+        },
+        markPoint: {
+          data: [{
+            coord: [allDates[allDates.length - 1], rs[rs.length - 1]],
+            value: rs[rs.length - 1].toFixed(1),
+            symbol: 'pin', symbolSize: 40, label: { fontSize: 9, color: '#fff' },
+            itemStyle: { color: '#7c3aed' },
+          }],
+        },
+      }],
+    });
+
+    // 同步缩放状态
+    relChart.on('datazoom', () => {
+      const dz = relChart.getOption().dataZoom[0];
+      relZoomStart = dz.start != null ? dz.start : 0;
+      relZoomEnd = dz.end != null ? dz.end : 100;
+    });
+    window.addEventListener('resize', () => relChart && relChart.resize());
+  }
+
   /* ---------- 主流程 ---------- */
 
   async function main() {
@@ -329,6 +440,8 @@
       zoomEndIdx = allDates.length - 1;
       renderChart();
       updateTable();
+      initRelPicker();
+      renderRelChart();
     } catch (e) {
       console.error('[indices] 加载失败:', e);
       document.getElementById('stats-body').innerHTML =
