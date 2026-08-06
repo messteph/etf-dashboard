@@ -171,13 +171,8 @@
 
     const series = INDICES.map((idx) => {
       const closes = seriesCache[idx.code];
-      // 归一化到该指数首个可用交易日 = 100
-      let firstVal = null, base = null;
-      const data = closes.map((c, i) => {
-        if (c == null) return null;
-        if (base == null) { base = c; }
-        return +(c / base * 100).toFixed(2);
-      });
+      // 直接使用原始指数点位
+      const data = closes.map((c) => (c == null ? null : +c.toFixed(2)));
       return {
         name: `${idx.name} (${idx.code})`,
         type: 'line', data, smooth: true, showSymbol: false,
@@ -190,7 +185,7 @@
     chart = echarts.init(document.getElementById('chart'));
     chart.setOption({
       title: {
-        text: '宽基指数走势对比（起点归一化 = 100）',
+        text: '宽基指数走势对比（原始点位）',
         left: 4, top: 2, textStyle: { fontSize: 15, fontWeight: 'bold', color: '#1e293b' },
       },
       tooltip: {
