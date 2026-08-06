@@ -247,7 +247,7 @@
         axisTick: { show: false },
       },
       yAxis: {
-        type: 'value', scale: true,
+        type: 'value', scale: true, interval: 1000,
         splitLine: { lineStyle: { color: '#e8ecf1' } },
         axisLabel: { color: '#64748b', fontSize: 10 },
       },
@@ -277,7 +277,7 @@
 
   /* ---------- 双指数相对走势图 (归一化相对强弱, 起点=100) ---------- */
   let relChart = null;
-  let relZoomStart = 0, relZoomEnd = 0;
+  let relZoomStart = 0, relZoomEnd = 100;   // 默认显示完整范围 (百分比)
 
   function initRelPicker() {
     const selA = document.getElementById('rel-a');
@@ -292,8 +292,8 @@
     });
     selA.value = '000300';   // 默认沪深300
     selB.value = '000905';   // 默认中证500
-    selA.addEventListener('change', () => { relZoomStart = 0; relZoomEnd = allDates.length - 1; renderRelChart(); });
-    selB.addEventListener('change', () => { relZoomStart = 0; relZoomEnd = allDates.length - 1; renderRelChart(); });
+    selA.addEventListener('change', () => { relZoomStart = 0; relZoomEnd = 100; renderRelChart(); });
+    selB.addEventListener('change', () => { relZoomStart = 0; relZoomEnd = 100; renderRelChart(); });
   }
 
   /** 归一化相对强弱: RS = (A/A0) / (B/B0) * 100 */
