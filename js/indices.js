@@ -14,7 +14,17 @@
     { code: '000905', name: '中证500', color: '#2563eb' },
     { code: '000510', name: '中证A500', color: '#059669' },
     { code: '000852', name: '中证1000', color: '#d97706' },
+    { code: '000922', name: '中证红利', color: '#dc2626' },
+    { code: '399006', name: '创业板指', color: '#7c3aed' },
   ];
+
+  /* 指数市场: 000xxx = 上证(东财 market 1 / 腾讯 sh), 399xxx = 深证(东财 market 0 / 腾讯 sz) */
+  function idxMarket(code) {
+    return code.startsWith('399') ? 0 : 1;
+  }
+  function idxPrefix(code) {
+    return code.startsWith('399') ? 'sz' : 'sh';
+  }
 
   /* ---------- 指数数据源 (基于 data.js 的多源框架, 指数用 sh 前缀 + 分段) ---------- */
 
@@ -23,7 +33,7 @@
     return new Promise((resolve, reject) => {
       const cb = 'idx_cb_' + Math.random().toString(36).slice(2, 10);
       const params = new URLSearchParams({
-        secid: `1.${idx.code}`,
+        secid: `${idxMarket(idx.code)}.${idx.code}`,
         fields1: 'f1,f2,f3,f4,f5,f6',
         fields2: 'f51,f52,f53,f54,f55,f56,f57',
         klt: '101', fqt: '1', beg: startDate, end: endDate,
@@ -69,7 +79,7 @@
     const seen = new Set();
     const merged = [];
     for (const [ss, se] of segs) {
-      const url = `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=sh${idx.code},day,${ss},${se},800,qfq`;
+      const url = `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${idxPrefix(idx.code)}${idx.code},day,${ss},${se},800,qfq`;
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), 15000);
       let resp;
@@ -79,7 +89,7 @@
       const json = await resp.json();
       const node = json && json.data;
       if (!node || typeof node !== 'object') throw new Error('腾讯数据为空');
-      const sub = node['sh' + idx.code] || {};
+      const sub = node[idxPrefix(idx.code) + idx.code] || {};
       const rows = sub.day || sub.qfqday || [];
       for (const r of rows) {
         const p = typeof r === 'string' ? r.split(',') : r;
@@ -218,7 +228,7 @@
     chart = echarts.init(document.getElementById('chart'));
     chart.setOption({
       title: {
-        text: '宽基指数走势对比（原始点位）',
+        text: '指数走势对比（原始点位）',
         left: 4, top: 2, textStyle: { fontSize: 15, fontWeight: 'bold', color: '#1e293b' },
       },
       tooltip: {
@@ -229,7 +239,7 @@
         valueFormatter: (v) => (v == null ? '-' : v.toFixed(2)),
       },
       legend: { right: 8, top: 8, textStyle: { color: '#64748b', fontSize: 11 } },
-      grid: { left: 60, right: 24, top: 48, bottom: 70 },
+      grid: { left: 60, right: 24, top: 78, bottom: 70 },
       xAxis: {
         type: 'category', data: allDates, boundaryGap: false,
         axisLine: { lineStyle: { color: '#e8ecf1' } },
