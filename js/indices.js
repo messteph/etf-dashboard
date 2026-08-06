@@ -142,7 +142,7 @@
       }
       if (first < 0) {
         html += `<tr><td>${idx.name}<br><span class="sub" style="color:var(--sub)">${idx.code}</span></td>
-                 <td colspan="4" style="color:var(--sub)">范围内无数据</td></tr>`;
+                 <td colspan="7" style="color:var(--sub)">范围内无数据</td></tr>`;
         return;
       }
       const c0 = closes[first];
@@ -150,18 +150,51 @@
       const ret = (c1 / c0 - 1) * 100;
       const days = eIdx - first;               // 交易日数
       const ann = ((c1 / c0) ** (252 / days) - 1) * 100;
+
+      // 最大回撤
+      let peak = -Infinity, maxDD = 0;
+      for (let i = first; i <= eIdx; i++) {
+        const c = closes[i];
+        if (c == null) continue;
+        if (c > peak) peak = c;
+        const dd = (c / peak - 1) * 100;
+        if (dd < maxDD) maxDD = dd;
+      }
+
+      // 年化波动率 (日收益标准差 * sqrt(252))
+      const rets = [];
+      for (let i = first + 1; i <= eIdx; i++) {
+        if (closes[i - 1] != null && closes[i] != null) {
+          rets.push(closes[i] / closes[i - 1] - 1);
+        }
+      }
+      let annVol = 0;
+      if (rets.length > 1) {
+        const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
+        const variance = rets.reduce((a, b) => a + (b - mean) ** 2, 0) / (rets.length - 1);
+        annVol = Math.sqrt(variance) * Math.sqrt(252) * 100;
+      }
+
+      // 夏普比率 = (年化收益 - 无风险利率) / 年化波动率 (无风险利率按 2%)
+      const RF = 2.0;
+      const sharpe = annVol > 0 ? (ann - RF) / annVol : 0;
+
       const cls = ret >= 0 ? 'up' : 'down';
+      const clsDD = maxDD <= 0 ? 'down' : 'up';
       html += `<tr>
         <td>${idx.name}<br><span class="sub" style="color:var(--sub)">${idx.code}</span></td>
         <td class="val ${cls}">${fmtPct(ret)}</td>
         <td class="val ${cls}">${fmtPct(ann)}</td>
+        <td class="val ${clsDD}">${fmtPct(maxDD, false)}</td>
+        <td class="val">${annVol.toFixed(2)}%</td>
+        <td class="val">${sharpe.toFixed(2)}</td>
         <td>${fmtPoint(c0)}</td>
         <td>${fmtPoint(c1)}</td>
       </tr>`;
     });
     tbody.innerHTML = html;
     document.getElementById('range-note').textContent =
-      `统计区间：${startDate} ~ ${endDate}（${eIdx - sIdx + 1} 个交易日）· 调整下方滑块可改变统计范围`;
+      `统计区间：${startDate} ~ ${endDate}（${eIdx - sIdx + 1} 个交易日）· 年化波动率按 252 交易日计算 · 夏普比率无风险利率按 2%`;
   }
 
   function renderChart() {
