@@ -72,7 +72,7 @@
   }
 
   /* ---------- 降级: 显示静态图 ---------- */
-  function showStaticFallback(group) {
+  function showStaticFallback(group, pfx) {
     Object.entries(group.staticImgs).forEach(([id, src]) => {
       const el = document.getElementById(id);
       if (el) el.classList.remove('loading');
@@ -86,6 +86,7 @@
         el.appendChild(img);
       }
     });
+    if (pfx) restoreTableBackup(pfx);
     const banner = document.getElementById('live-banner');
     if (banner) {
       banner.textContent = '⚠ 实时数据加载失败，当前显示静态缓存图（数据截至每日 16:00 更新）';
@@ -97,6 +98,39 @@
   function setPanelLoading(panelId, on) {
     document.querySelectorAll('#' + panelId + ' .chart-box').forEach((el) => {
       el.classList.toggle('loading', on);
+    });
+  }
+
+  /* ---------- 清空表格静态占位值: 数据就绪前不显示旧数据 ----------
+   * 原值暂存于 tableBackup, 供降级路径 (showStaticFallback) 恢复 */
+  const tableBackup = {};
+
+  function clearTablePlaceholders() {
+    ['gv', 'sd'].forEach((pfx) => {
+      ['a', 'b', 'p', 'bh'].forEach((col) => {
+        ['ret', 'ann', 'dd', 'dd_date'].forEach((row) => {
+          const el = document.getElementById(`${pfx}_tbl_${col}_${row}`);
+          if (!el) return;
+          if (!(el.id in tableBackup)) tableBackup[el.id] = el.textContent;
+          el.textContent = (row === 'dd_date') ? '—' : '…';
+        });
+      });
+      // 图注占位
+      ['cap_a', 'cap_b', 'cap_rebal'].forEach((cap) => {
+        const el = document.getElementById(`${pfx}_${cap}`);
+        if (!el) return;
+        if (!(el.id in tableBackup)) tableBackup[el.id] = el.textContent;
+        el.textContent = '数据加载中…';
+      });
+    });
+  }
+
+  function restoreTableBackup(pfx) {
+    const prefix = pfx + '_';
+    Object.entries(tableBackup).forEach(([id, text]) => {
+      if (!id.startsWith(prefix)) return;
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
     });
   }
 
@@ -204,7 +238,7 @@
       return stats.dates[stats.dates.length - 1];
     } catch (e) {
       console.error(`[etf-dashboard] ${groupKey} 实时数据加载失败:`, e);
-      showStaticFallback(group);
+      showStaticFallback(group, groupKey);
       return null;
     }
   }
@@ -233,13 +267,14 @@
   /* ---------- 主流程 ---------- */
   async function main() {
     setupTabs();
-    // 数据未就绪: 所有图表先显示"数据加载中"
+    // 数据未就绪: 所有图表先显示"数据加载中", 表格清空静态占位值
     setPanelLoading('panel-gv', true);
     setPanelLoading('panel-sd', true);
+    clearTablePlaceholders();
 
     const hasEcharts = await ensureECharts();
     if (!hasEcharts) {
-      Object.values(GROUPS).forEach((g) => showStaticFallback(g));
+      Object.keys(GROUPS).forEach((k) => showStaticFallback(GROUPS[k], k));
       return;
     }
 
