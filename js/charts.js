@@ -45,7 +45,8 @@ function renderTrend(elId, s, color, title, closeKey, maKey) {
     legend: { right: 8, top: 6, textStyle: { color: C.sub, fontSize: 11 } },
     grid: baseGrid(),
     xAxis: dateAxis(dates),
-    yAxis: valAxis((v) => v.toFixed(2)),
+    yAxis: { type: 'log', scale: true, splitLine: { lineStyle: { color: C.grid } },
+      axisLabel: { color: C.sub, fontSize: 10, formatter: (v) => v.toFixed(2) } },
     series: [
       { name: '收盘价', type: 'line', data: s[closeKey], smooth: true, showSymbol: false,
         lineStyle: { width: 2.2, color: color }, itemStyle: { color: color },
@@ -70,7 +71,8 @@ function renderCompare(elId, s, colorA, colorB, labelA, labelB) {
     legend: { right: 8, top: 6, textStyle: { color: C.sub, fontSize: 11 } },
     grid: baseGrid(),
     xAxis: dateAxis(s.dates),
-    yAxis: valAxis((v) => v.toFixed(0)),
+    yAxis: { type: 'log', scale: true, splitLine: { lineStyle: { color: C.grid } },
+      axisLabel: { color: C.sub, fontSize: 10, formatter: (v) => v.toFixed(0) } },
     series: [
       { name: labelA, type: 'line', data: s.normA, smooth: true, showSymbol: false,
         lineStyle: { width: 2.2, color: colorA }, itemStyle: { color: colorA } },

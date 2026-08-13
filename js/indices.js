@@ -247,7 +247,7 @@
         axisTick: { show: false },
       },
       yAxis: {
-        type: 'value', scale: true, interval: 1000,
+        type: 'log', scale: true,
         splitLine: { lineStyle: { color: '#e8ecf1' } },
         axisLabel: { color: '#64748b', fontSize: 10 },
       },
@@ -273,6 +273,73 @@
     });
 
     window.addEventListener('resize', () => chart && chart.resize());
+  }
+
+  /* ---------- 归一化走势图 (起始日 = 1.0, 对数坐标) ---------- */
+  let normChart = null;
+  let normZoomStart = 0, normZoomEnd = 100;
+
+  function renderNormChart() {
+    const legend = document.getElementById('legend-norm');
+    legend.innerHTML = INDICES.map((i) =>
+      `<span><i style="background:${i.color}"></i>${i.name}（${i.code}）</span>`).join('');
+
+    const series = INDICES.map((idx) => {
+      const closes = seriesCache[idx.code];
+      // 找到该指数首个可用交易日作为归一化基准
+      let base = null;
+      let data = closes.map((c) => {
+        if (c == null) return null;
+        if (base == null) base = c;
+        return +((c / base)).toFixed(4);
+      });
+      return {
+        name: `${idx.name} (${idx.code})`,
+        type: 'line', data, smooth: true, showSymbol: false, connectNulls: false,
+        lineStyle: { width: 2.2, color: idx.color },
+        itemStyle: { color: idx.color },
+      };
+    });
+
+    if (!normChart) normChart = echarts.init(document.getElementById('chart-norm'));
+    normChart.setOption({
+      title: {
+        text: '指数归一化走势（起始日 = 1.0，对数坐标）',
+        left: 4, top: 2, textStyle: { fontSize: 15, fontWeight: 'bold', color: '#1e293b' },
+      },
+      tooltip: {
+        trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0',
+        textStyle: { color: '#1e293b', fontSize: 12 }, axisPointer: { type: 'cross' },
+        valueFormatter: (v) => (v == null ? '-' : v.toFixed(3)),
+      },
+      legend: { right: 8, top: 8, textStyle: { color: '#64748b', fontSize: 11 } },
+      grid: { left: 60, right: 24, top: 78, bottom: 70 },
+      xAxis: {
+        type: 'category', data: allDates, boundaryGap: false,
+        axisLine: { lineStyle: { color: '#e8ecf1' } },
+        axisLabel: { color: '#64748b', fontSize: 10 }, axisTick: { show: false },
+      },
+      yAxis: {
+        type: 'log', scale: true,
+        splitLine: { lineStyle: { color: '#e8ecf1' } },
+        axisLabel: { color: '#64748b', fontSize: 10, formatter: (v) => v.toFixed(1) },
+      },
+      dataZoom: [
+        { type: 'inside', start: normZoomStart, end: normZoomEnd, zoomOnMouseWheel: true, moveOnMouseMove: true },
+        { type: 'slider', start: normZoomStart, end: normZoomEnd, bottom: 10, height: 22,
+          borderColor: '#e2e8f0', fillerColor: 'rgba(59,130,246,0.12)',
+          handleStyle: { color: '#3b82f6' }, textStyle: { color: '#64748b', fontSize: 10 },
+          dataBackground: { lineStyle: { color: '#cbd5e1' }, areaStyle: { color: '#eef2f7' } } },
+      ],
+      series: series,
+    });
+
+    normChart.on('datazoom', () => {
+      const dz = normChart.getOption().dataZoom[0];
+      normZoomStart = dz.start != null ? dz.start : 0;
+      normZoomEnd = dz.end != null ? dz.end : 100;
+    });
+    window.addEventListener('resize', () => normChart && normChart.resize());
   }
 
   /* ---------- 双指数相对走势图 (归一化相对强弱, 起点=100) ---------- */
@@ -342,7 +409,7 @@
         axisLabel: { color: '#64748b', fontSize: 10 }, axisTick: { show: false },
       },
       yAxis: {
-        type: 'value', scale: true,
+        type: 'log', scale: true,
         splitLine: { lineStyle: { color: '#e8ecf1' } },
         axisLabel: { color: '#64748b', fontSize: 10, formatter: (v) => v.toFixed(0) },
       },
@@ -449,6 +516,7 @@
       zoomStartIdx = 0;
       zoomEndIdx = allDates.length - 1;
       renderChart();
+      renderNormChart();
       updateTable();
       initRelPicker();
       renderRelChart();
