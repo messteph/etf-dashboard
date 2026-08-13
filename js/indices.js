@@ -247,7 +247,7 @@
         axisTick: { show: false },
       },
       yAxis: {
-        type: 'log', scale: true,
+        type: 'value', scale: true, interval: 1000,
         splitLine: { lineStyle: { color: '#e8ecf1' } },
         axisLabel: { color: '#64748b', fontSize: 10 },
       },
@@ -275,7 +275,7 @@
     window.addEventListener('resize', () => chart && chart.resize());
   }
 
-  /* ---------- 归一化走势图 (起始日 = 1.0, 对数坐标) ---------- */
+  /* ---------- 归一化走势图 (起始日 = 100, 线性坐标) ---------- */
   let normChart = null;
   let normZoomStart = 0, normZoomEnd = 100;
 
@@ -286,12 +286,12 @@
 
     const series = INDICES.map((idx) => {
       const closes = seriesCache[idx.code];
-      // 找到该指数首个可用交易日作为归一化基准
+      // 找到该指数首个可用交易日作为归一化基准, 通常做法: 起始日 = 100
       let base = null;
       let data = closes.map((c) => {
         if (c == null) return null;
         if (base == null) base = c;
-        return +((c / base)).toFixed(4);
+        return +(c / base * 100).toFixed(2);
       });
       return {
         name: `${idx.name} (${idx.code})`,
@@ -304,13 +304,13 @@
     if (!normChart) normChart = echarts.init(document.getElementById('chart-norm'));
     normChart.setOption({
       title: {
-        text: '指数归一化走势（起始日 = 1.0，对数坐标）',
+        text: '指数归一化走势（起始日 = 100）',
         left: 4, top: 2, textStyle: { fontSize: 15, fontWeight: 'bold', color: '#1e293b' },
       },
       tooltip: {
         trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0',
         textStyle: { color: '#1e293b', fontSize: 12 }, axisPointer: { type: 'cross' },
-        valueFormatter: (v) => (v == null ? '-' : v.toFixed(3)),
+        valueFormatter: (v) => (v == null ? '-' : v.toFixed(1)),
       },
       legend: { right: 8, top: 8, textStyle: { color: '#64748b', fontSize: 11 } },
       grid: { left: 60, right: 24, top: 78, bottom: 70 },
@@ -320,9 +320,9 @@
         axisLabel: { color: '#64748b', fontSize: 10 }, axisTick: { show: false },
       },
       yAxis: {
-        type: 'log', scale: true,
+        type: 'value', scale: true,
         splitLine: { lineStyle: { color: '#e8ecf1' } },
-        axisLabel: { color: '#64748b', fontSize: 10, formatter: (v) => v.toFixed(1) },
+        axisLabel: { color: '#64748b', fontSize: 10, formatter: (v) => v.toFixed(0) },
       },
       dataZoom: [
         { type: 'inside', start: normZoomStart, end: normZoomEnd, zoomOnMouseWheel: true, moveOnMouseMove: true },
@@ -409,7 +409,7 @@
         axisLabel: { color: '#64748b', fontSize: 10 }, axisTick: { show: false },
       },
       yAxis: {
-        type: 'log', scale: true,
+        type: 'value', scale: true,
         splitLine: { lineStyle: { color: '#e8ecf1' } },
         axisLabel: { color: '#64748b', fontSize: 10, formatter: (v) => v.toFixed(0) },
       },

@@ -45,8 +45,7 @@ function renderTrend(elId, s, color, title, closeKey, maKey) {
     legend: { right: 8, top: 6, textStyle: { color: C.sub, fontSize: 11 } },
     grid: baseGrid(),
     xAxis: dateAxis(dates),
-    yAxis: { type: 'log', scale: true, splitLine: { lineStyle: { color: C.grid } },
-      axisLabel: { color: C.sub, fontSize: 10, formatter: (v) => v.toFixed(2) } },
+    yAxis: valAxis((v) => v.toFixed(2)),
     series: [
       { name: '收盘价', type: 'line', data: s[closeKey], smooth: true, showSymbol: false,
         lineStyle: { width: 2.2, color: color }, itemStyle: { color: color },
@@ -60,23 +59,22 @@ function renderTrend(elId, s, color, title, closeKey, maKey) {
   return chart;
 }
 
-/* ---------- 双基金归一化对比 ---------- */
+/* ---------- 双基金对比走势 (原始净值) ---------- */
 function renderCompare(elId, s, colorA, colorB, labelA, labelB) {
   const chart = mkChart(elId);
   if (!chart) return;
   chart.setOption({
-    title: { text: labelA + ' vs ' + labelB + ' 走势对比（起点归一化 = 100）', left: 4, top: 2,
+    title: { text: labelA + ' vs ' + labelB + ' 走势对比（原始净值）', left: 4, top: 2,
       textStyle: { fontSize: 14, fontWeight: 'bold', color: C.txt } },
-    tooltip: baseTooltip({ valueFormatter: (v) => (v == null ? '-' : v.toFixed(2)) }),
+    tooltip: baseTooltip({ valueFormatter: (v) => (v == null ? '-' : v.toFixed(3) + ' 元') }),
     legend: { right: 8, top: 6, textStyle: { color: C.sub, fontSize: 11 } },
     grid: baseGrid(),
     xAxis: dateAxis(s.dates),
-    yAxis: { type: 'log', scale: true, splitLine: { lineStyle: { color: C.grid } },
-      axisLabel: { color: C.sub, fontSize: 10, formatter: (v) => v.toFixed(0) } },
+    yAxis: valAxis((v) => v.toFixed(2)),
     series: [
-      { name: labelA, type: 'line', data: s.normA, smooth: true, showSymbol: false,
+      { name: labelA, type: 'line', data: s.closeA, smooth: true, showSymbol: false,
         lineStyle: { width: 2.2, color: colorA }, itemStyle: { color: colorA } },
-      { name: labelB, type: 'line', data: s.normB, smooth: true, showSymbol: false,
+      { name: labelB, type: 'line', data: s.closeB, smooth: true, showSymbol: false,
         lineStyle: { width: 2.2, color: colorB }, itemStyle: { color: colorB } },
     ],
   });
@@ -167,23 +165,22 @@ function renderRebalance(elId, r) {
 /* ---------- 指标表更新 ---------- */
 function updateStats(pfx, cfg, s, r) {
   const fmt = (v, d = 2) => v.toFixed(d) + '%';
-  // 区间涨幅
-  setText(pfx + '_tbl_a_ret', (s.retA >= 0 ? '+' : '') + fmt(s.retA));
-  setText(pfx + '_tbl_b_ret', (s.retB >= 0 ? '+' : '') + fmt(s.retB));
-  setText(pfx + '_tbl_p_ret', (r.finalPort >= 0 ? '+' : '') + fmt(r.finalPort));
-  setText(pfx + '_tbl_bh_ret', (r.finalBH >= 0 ? '+' : '') + fmt(r.finalBH));
-  // 年化收益率 (基于交易日数, 252 个交易日/年)
-  const ann = (v) => (v >= 0 ? '+' : '') + fmt(v);
-  setText(pfx + '_tbl_a_ann', ann(s.annA));
-  setText(pfx + '_tbl_b_ann', ann(s.annB));
-  setText(pfx + '_tbl_p_ann', ann(r.annPort));
-  setText(pfx + '_tbl_bh_ann', ann(r.annBH));
-  // 最大回撤
-  setText(pfx + '_tbl_a_dd', fmt(s.minDDA));
-  setText(pfx + '_tbl_b_dd', fmt(s.minDDB));
-  setText(pfx + '_tbl_p_dd', fmt(r.maxDD));
-  setText(pfx + '_tbl_bh_dd', fmt(r.maxDDBH));
-  // 回撤发生日
+  // 区间涨幅 (正值红 / 负值绿)
+  setVal(pfx + '_tbl_a_ret', s.retA, fmt);
+  setVal(pfx + '_tbl_b_ret', s.retB, fmt);
+  setVal(pfx + '_tbl_p_ret', r.finalPort, fmt);
+  setVal(pfx + '_tbl_bh_ret', r.finalBH, fmt);
+  // 年化收益率
+  setVal(pfx + '_tbl_a_ann', s.annA, fmt);
+  setVal(pfx + '_tbl_b_ann', s.annB, fmt);
+  setVal(pfx + '_tbl_p_ann', r.annPort, fmt);
+  setVal(pfx + '_tbl_bh_ann', r.annBH, fmt);
+  // 最大回撤 (均为负值 -> 绿色)
+  setVal(pfx + '_tbl_a_dd', s.minDDA, fmt);
+  setVal(pfx + '_tbl_b_dd', s.minDDB, fmt);
+  setVal(pfx + '_tbl_p_dd', r.maxDD, fmt);
+  setVal(pfx + '_tbl_bh_dd', r.maxDDBH, fmt);
+  // 回撤发生日 (中性)
   setText(pfx + '_tbl_a_dd_date', s.minDDA_date);
   setText(pfx + '_tbl_b_dd_date', s.minDDB_date);
   setText(pfx + '_tbl_p_dd_date', r.maxDDDate);
@@ -196,6 +193,15 @@ function updateStats(pfx, cfg, s, r) {
     `买入持有 ${(r.finalBH >= 0 ? '+' : '') + fmt(r.finalBH)}，超额 ${(r.finalPort - r.finalBH >= 0 ? '+' : '') + fmt(r.finalPort - r.finalBH)} 个百分点；` +
     `组合最大回撤 ${fmt(r.maxDD)}，介于 ${cfg.labelA}（${fmt(s.minDDA)}）与 ${cfg.labelB}（${fmt(s.minDDB)}）之间。`);
   setText(pfx + '_range', `数据区间：${s.dates[0]} ~ ${s.dates[s.dates.length - 1]}（${s.dates.length} 个交易日）`);
+}
+
+/** 设置单元格文本并按正负着色: 正值红 / 负值绿 */
+function setVal(id, value, fmt) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const sign = value >= 0 ? '+' : '';
+  el.textContent = sign + fmt(Math.abs(value));
+  el.className = 'val ' + (value >= 0 ? 'up' : 'down');
 }
 
 function setText(id, text) {
