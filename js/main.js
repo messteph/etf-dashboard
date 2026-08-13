@@ -151,8 +151,20 @@
         String(now.getDate()).padStart(2, '0');
 
       const [rowsA0, rowsB0] = await Promise.all([
-        fetchEtfDaily(group.etfA, group.startDate, endDate),
-        fetchEtfDaily(group.etfB, group.startDate, endDate),
+        (async () => {
+          const cached = getSessionCache(`etf_${group.etfA.code}_${group.startDate}`);
+          if (cached) { console.log(`[etf-dashboard] ${group.etfA.code} 使用会话缓存`); return cached; }
+          const rows = await fetchEtfDaily(group.etfA, group.startDate, endDate);
+          setSessionCache(`etf_${group.etfA.code}_${group.startDate}`, rows);
+          return rows;
+        })(),
+        (async () => {
+          const cached = getSessionCache(`etf_${group.etfB.code}_${group.startDate}`);
+          if (cached) { console.log(`[etf-dashboard] ${group.etfB.code} 使用会话缓存`); return cached; }
+          const rows = await fetchEtfDaily(group.etfB, group.startDate, endDate);
+          setSessionCache(`etf_${group.etfB.code}_${group.startDate}`, rows);
+          return rows;
+        })(),
       ]);
       if (rowsA0.length < 2 || rowsB0.length < 2) throw new Error('数据不足');
 

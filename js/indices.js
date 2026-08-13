@@ -485,9 +485,18 @@
       const endDate = now.getFullYear().toString() +
         String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
 
-      // 并行拉取四个指数
+      // 并行拉取六个指数 (优先使用会话缓存, 缓存命中则不发起网络请求)
       const results = await Promise.allSettled(
-        INDICES.map((idx) => fetchIndexData(idx, START_DATE, endDate))
+        INDICES.map(async (idx) => {
+          const cached = getSessionCache('idx_' + idx.code + '_' + START_DATE);
+          if (cached) {
+            console.log(`[indices] ${idx.name} 使用会话缓存`);
+            return cached;
+          }
+          const rows = await fetchIndexData(idx, START_DATE, endDate);
+          setSessionCache('idx_' + idx.code + '_' + START_DATE, rows);
+          return rows;
+        })
       );
 
       // 构建共同日期轴 (取所有指数日期的并集, 排序)

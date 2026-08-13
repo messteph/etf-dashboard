@@ -160,6 +160,34 @@ async function fetchEtfDaily(etf, startDate, endDate) {
   throw lastErr || new Error('所有数据源均失败');
 }
 
+/* ============================================================
+ * 会话级数据缓存
+ * 同一浏览器会话内首次拉取后缓存, 之后页面间切换(组合页 <-> 指数页)
+ * 直接使用缓存渲染, 不再发起网络请求。跨天或新开会话自动失效重新拉取。
+ * ============================================================ */
+function getSessionCache(key) {
+  try {
+    const raw = sessionStorage.getItem('etf_cache_' + key);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    // 跨天失效: 缓存日期不是今天则视为过期
+    const today = new Date();
+    const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    if (obj.date !== todayStr) return null;
+    return Array.isArray(obj.rows) && obj.rows.length >= 2 ? obj.rows : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function setSessionCache(key, rows) {
+  try {
+    const today = new Date();
+    const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    sessionStorage.setItem('etf_cache_' + key, JSON.stringify({ date: todayStr, rows: rows }));
+  } catch (e) { /* storage 不可用则忽略 */ }
+}
+
 /** 计算回撤序列 (负数百分比) */
 function calcDrawdown(closes) {
   let peak = -Infinity;
