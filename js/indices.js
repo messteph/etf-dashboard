@@ -453,9 +453,20 @@
     window.addEventListener('resize', () => relChart && relChart.resize());
   }
 
+  /* ---------- 图表加载状态: 数据未就绪时显示"数据加载中" ---------- */
+  function setChartLoading(on) {
+    ['chart', 'chart-norm', 'chart-rel'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('loading', on);
+    });
+  }
+
   /* ---------- 主流程 ---------- */
 
   async function main() {
+    // 数据未就绪: 图表先显示"数据加载中"
+    setChartLoading(true);
+
     // 加载 ECharts (CDN 兜底)
     const CDNS = [
       'https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js',
@@ -529,10 +540,13 @@
       updateTable();
       initRelPicker();
       renderRelChart();
+      // 数据就绪, 移除"数据加载中"提示
+      setChartLoading(false);
     } catch (e) {
       console.error('[indices] 加载失败:', e);
+      setChartLoading(false);
       document.getElementById('stats-body').innerHTML =
-        '<tr><td colspan="5" style="text-align:center;color:#dc2626">数据加载失败，请刷新重试</td></tr>';
+        '<tr><td colspan="8" style="text-align:center;color:#dc2626">数据加载失败，请刷新重试</td></tr>';
     }
   }
 

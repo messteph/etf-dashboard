@@ -75,6 +75,7 @@
   function showStaticFallback(group) {
     Object.entries(group.staticImgs).forEach(([id, src]) => {
       const el = document.getElementById(id);
+      if (el) el.classList.remove('loading');
       if (el && !el.querySelector('img')) {
         const img = document.createElement('img');
         img.src = src;
@@ -90,6 +91,13 @@
       banner.textContent = '⚠ 实时数据加载失败，当前显示静态缓存图（数据截至每日 16:00 更新）';
       banner.style.display = 'block';
     }
+  }
+
+  /* ---------- 图表加载状态: 数据未就绪时显示"数据加载中" ---------- */
+  function setPanelLoading(panelId, on) {
+    document.querySelectorAll('#' + panelId + ' .chart-box').forEach((el) => {
+      el.classList.toggle('loading', on);
+    });
   }
 
   /* ---------- 计算单组指标 (扩展 computeStats 为通用版) ---------- */
@@ -181,6 +189,8 @@
 
       // 隐藏静态降级图
       document.querySelectorAll('#' + group.panelId + ' .chart-card img').forEach((img) => img.remove());
+      // 数据就绪, 移除"数据加载中"提示
+      setPanelLoading(group.panelId, false);
 
       renderTrend(`chart-${pfx}-a-trend`, stats, group.colorA, `${group.labelA} 走势`, 'closeA', 'maA');
       renderTrend(`chart-${pfx}-b-trend`, stats, group.colorB, `${group.labelB} 走势`, 'closeB', 'maB');
@@ -223,6 +233,10 @@
   /* ---------- 主流程 ---------- */
   async function main() {
     setupTabs();
+    // 数据未就绪: 所有图表先显示"数据加载中"
+    setPanelLoading('panel-gv', true);
+    setPanelLoading('panel-sd', true);
+
     const hasEcharts = await ensureECharts();
     if (!hasEcharts) {
       Object.values(GROUPS).forEach((g) => showStaticFallback(g));
