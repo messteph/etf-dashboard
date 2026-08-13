@@ -195,11 +195,11 @@ function updateStats(pfx, cfg, s, r) {
   setText(pfx + '_range', `数据区间：${s.dates[0]} ~ ${s.dates[s.dates.length - 1]}（${s.dates.length} 个交易日）`);
 }
 
-/** 设置单元格文本并按正负着色: 正值红 / 负值绿 */
+/** 设置单元格文本并按正负着色: 正值红(带+) / 负值绿(带-) */
 function setVal(id, value, fmt) {
   const el = document.getElementById(id);
   if (!el) return;
-  const sign = value >= 0 ? '+' : '';
+  const sign = value >= 0 ? '+' : '-';
   el.textContent = sign + fmt(Math.abs(value));
   el.className = 'val ' + (value >= 0 ? 'up' : 'down');
 }
