@@ -473,27 +473,25 @@
     });
   }
 
-  /** 同一张图: 左轴 = 归一化走势(起始=100), 右轴 = 回撤水下曲线(%) */
+  /** 同一张图: 左轴 = 原始指数点位, 右轴 = 回撤水下曲线(%) */
   function renderComboChart() {
     const idx = INDICES.find((i) => i.code === comboCode);
     const closes = seriesCache[comboCode];
     if (!idx || !closes) return;
 
-    let base = null;
     let peak = -Infinity;
-    const norm = [], dd = [];
+    const price = [], dd = [];
     closes.forEach((c) => {
-      if (c == null) { norm.push(null); dd.push(null); return; }
-      if (base == null) base = c;
+      if (c == null) { price.push(null); dd.push(null); return; }
       if (c > peak) peak = c;
-      norm.push(+(c / base * 100).toFixed(2));
+      price.push(+c.toFixed(2));
       dd.push(+(c / peak * 100 - 100).toFixed(2));
     });
 
     if (!comboChart) comboChart = echarts.init(document.getElementById('chart-combo'));
     comboChart.setOption({
       title: {
-        text: `${idx.name} 走势与最大回撤（起始日 = 100）`,
+        text: `${idx.name} 走势与最大回撤`,
         left: 4, top: 2, textStyle: { fontSize: 14, fontWeight: 'bold', color: '#1e293b' },
       },
       tooltip: {
@@ -510,7 +508,7 @@
       },
       yAxis: [
         {
-          type: 'value', scale: true, name: '归一化', nameTextStyle: { color: '#64748b', fontSize: 10 },
+          type: 'value', scale: true, name: '点位', nameTextStyle: { color: '#64748b', fontSize: 10 },
           splitLine: { lineStyle: { color: '#e8ecf1' } },
           axisLabel: { color: '#64748b', fontSize: 10, formatter: (v) => v.toFixed(0) },
         },
@@ -530,7 +528,7 @@
       series: [
         {
           name: `${idx.name} 走势`,
-          type: 'line', yAxisIndex: 0, data: norm, smooth: true, showSymbol: false, connectNulls: false,
+          type: 'line', yAxisIndex: 0, data: price, smooth: true, showSymbol: false, connectNulls: false,
           lineStyle: { width: 2.4, color: idx.color }, itemStyle: { color: idx.color },
           areaStyle: {
             color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
@@ -540,8 +538,8 @@
         {
           name: '最大回撤',
           type: 'line', yAxisIndex: 1, data: dd, smooth: true, showSymbol: false, connectNulls: false,
-          lineStyle: { width: 1.8, color: '#dc2626' }, itemStyle: { color: '#dc2626' },
-          areaStyle: { color: 'rgba(220,38,38,0.16)' },
+          lineStyle: { width: 1.8, color: '#334155' }, itemStyle: { color: '#334155' },
+          areaStyle: { color: 'rgba(51,65,85,0.18)' },
           markPoint: (() => {
             let minIdx = -1, minVal = 0;
             dd.forEach((v, i) => { if (v != null && v < minVal) { minVal = v; minIdx = i; } });
@@ -551,7 +549,7 @@
                 coord: [allDates[minIdx], minVal],
                 value: minVal.toFixed(2) + '%',
                 symbol: 'pin', symbolSize: 42, label: { fontSize: 10, color: '#fff' },
-                itemStyle: { color: '#dc2626' },
+                itemStyle: { color: '#334155' },
               }],
             };
           })(),
