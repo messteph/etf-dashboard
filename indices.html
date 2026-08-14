@@ -45,7 +45,7 @@
   #chart { width: 100%; height: 480px; position: relative; }
 
   /* 数据加载中提示 */
-  #chart.loading::after, #chart-norm.loading::after, #chart-rel.loading::after {
+  #chart.loading::after, #chart-norm.loading::after, #chart-rel.loading::after, #chart-combo.loading::after {
     content: '⏳ 数据加载中…';
     position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
@@ -68,6 +68,7 @@
   .picker-hint { font-size: 12px; color: var(--sub); margin-left: auto; }
   #chart-rel { width: 100%; height: 420px; position: relative; }
   #chart-norm { width: 100%; height: 440px; position: relative; }
+  #chart-combo { width: 100%; height: 420px; position: relative; }
 
   .zoom-hint {
     margin-top: 10px; font-size: 12px; color: var(--sub); text-align: center;
@@ -145,6 +146,17 @@
     <div class="legend" id="legend-norm"></div>
     <div id="chart-norm"></div>
     <div class="zoom-hint">🖱 拖动底部滑块或滚轮缩放 · 各指数以起始日收盘价为 100 归一化</div>
+  </div>
+
+  <!-- 单指数走势 + 最大回撤 -->
+  <div class="chart-card">
+    <div class="picker">
+      <span class="picker-label">选择指数</span>
+      <select id="combo-idx"></select>
+      <span class="picker-hint">左轴：归一化走势（起始日 = 100）· 右轴：最大回撤（%）</span>
+    </div>
+    <div id="chart-combo"></div>
+    <div class="zoom-hint">🖱 拖动底部滑块或滚轮缩放 · 走势与回撤同步展示，回撤为水下曲线</div>
   </div>
 
   <!-- 双指数相对走势 -->

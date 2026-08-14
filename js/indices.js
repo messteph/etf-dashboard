@@ -453,9 +453,123 @@
     window.addEventListener('resize', () => relChart && relChart.resize());
   }
 
+  /* ---------- 单指数走势 + 最大回撤组合图 (下拉选择, 双 Y 轴) ---------- */
+  let comboChart = null;
+  let comboZoomStart = 0, comboZoomEnd = 100;
+  let comboCode = '000300';
+
+  function initComboPicker() {
+    const sel = document.getElementById('combo-idx');
+    INDICES.forEach((idx) => {
+      const o = document.createElement('option');
+      o.value = idx.code; o.textContent = `${idx.name} (${idx.code})`;
+      sel.appendChild(o);
+    });
+    sel.value = comboCode;
+    sel.addEventListener('change', () => {
+      comboCode = sel.value;
+      comboZoomStart = 0; comboZoomEnd = 100;
+      renderComboChart();
+    });
+  }
+
+  /** 同一张图: 左轴 = 归一化走势(起始=100), 右轴 = 回撤水下曲线(%) */
+  function renderComboChart() {
+    const idx = INDICES.find((i) => i.code === comboCode);
+    const closes = seriesCache[comboCode];
+    if (!idx || !closes) return;
+
+    let base = null;
+    let peak = -Infinity;
+    const norm = [], dd = [];
+    closes.forEach((c) => {
+      if (c == null) { norm.push(null); dd.push(null); return; }
+      if (base == null) base = c;
+      if (c > peak) peak = c;
+      norm.push(+(c / base * 100).toFixed(2));
+      dd.push(+(c / peak * 100 - 100).toFixed(2));
+    });
+
+    if (!comboChart) comboChart = echarts.init(document.getElementById('chart-combo'));
+    comboChart.setOption({
+      title: {
+        text: `${idx.name} 走势与最大回撤（起始日 = 100）`,
+        left: 4, top: 2, textStyle: { fontSize: 14, fontWeight: 'bold', color: '#1e293b' },
+      },
+      tooltip: {
+        trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0',
+        textStyle: { color: '#1e293b', fontSize: 12 }, axisPointer: { type: 'cross' },
+        valueFormatter: (v) => (v == null ? '-' : v.toFixed(2)),
+      },
+      legend: { right: 8, top: 8, textStyle: { color: '#64748b', fontSize: 11 } },
+      grid: { left: 60, right: 62, top: 44, bottom: 70 },
+      xAxis: {
+        type: 'category', data: allDates, boundaryGap: false,
+        axisLine: { lineStyle: { color: '#e8ecf1' } },
+        axisLabel: { color: '#64748b', fontSize: 10 }, axisTick: { show: false },
+      },
+      yAxis: [
+        {
+          type: 'value', scale: true, name: '归一化', nameTextStyle: { color: '#64748b', fontSize: 10 },
+          splitLine: { lineStyle: { color: '#e8ecf1' } },
+          axisLabel: { color: '#64748b', fontSize: 10, formatter: (v) => v.toFixed(0) },
+        },
+        {
+          type: 'value', scale: true, name: '回撤 %', nameTextStyle: { color: '#64748b', fontSize: 10 },
+          splitLine: { show: false },
+          axisLabel: { color: '#64748b', fontSize: 10, formatter: (v) => v + '%' },
+        },
+      ],
+      dataZoom: [
+        { type: 'inside', start: comboZoomStart, end: comboZoomEnd, zoomOnMouseWheel: true, moveOnMouseMove: true },
+        { type: 'slider', start: comboZoomStart, end: comboZoomEnd, bottom: 10, height: 22,
+          borderColor: '#e2e8f0', fillerColor: 'rgba(59,130,246,0.12)',
+          handleStyle: { color: '#3b82f6' }, textStyle: { color: '#64748b', fontSize: 10 },
+          dataBackground: { lineStyle: { color: '#cbd5e1' }, areaStyle: { color: '#eef2f7' } } },
+      ],
+      series: [
+        {
+          name: `${idx.name} 走势`,
+          type: 'line', yAxisIndex: 0, data: norm, smooth: true, showSymbol: false, connectNulls: false,
+          lineStyle: { width: 2.4, color: idx.color }, itemStyle: { color: idx.color },
+          areaStyle: {
+            color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [{ offset: 0, color: idx.color + '2e' }, { offset: 1, color: idx.color + '05' }] },
+          },
+        },
+        {
+          name: '最大回撤',
+          type: 'line', yAxisIndex: 1, data: dd, smooth: true, showSymbol: false, connectNulls: false,
+          lineStyle: { width: 1.8, color: '#dc2626' }, itemStyle: { color: '#dc2626' },
+          areaStyle: { color: 'rgba(220,38,38,0.16)' },
+          markPoint: (() => {
+            let minIdx = -1, minVal = 0;
+            dd.forEach((v, i) => { if (v != null && v < minVal) { minVal = v; minIdx = i; } });
+            if (minIdx < 0) return {};
+            return {
+              data: [{
+                coord: [allDates[minIdx], minVal],
+                value: minVal.toFixed(2) + '%',
+                symbol: 'pin', symbolSize: 42, label: { fontSize: 10, color: '#fff' },
+                itemStyle: { color: '#dc2626' },
+              }],
+            };
+          })(),
+        },
+      ],
+    });
+
+    comboChart.on('datazoom', () => {
+      const dz = comboChart.getOption().dataZoom[0];
+      comboZoomStart = dz.start != null ? dz.start : 0;
+      comboZoomEnd = dz.end != null ? dz.end : 100;
+    });
+    window.addEventListener('resize', () => comboChart && comboChart.resize());
+  }
+
   /* ---------- 图表加载状态: 数据未就绪时显示"数据加载中" ---------- */
   function setChartLoading(on) {
-    ['chart', 'chart-norm', 'chart-rel'].forEach((id) => {
+    ['chart', 'chart-norm', 'chart-rel', 'chart-combo'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.classList.toggle('loading', on);
     });
@@ -540,6 +654,8 @@
       updateTable();
       initRelPicker();
       renderRelChart();
+      initComboPicker();
+      renderComboChart();
       // 数据就绪, 移除"数据加载中"提示
       setChartLoading(false);
     } catch (e) {
