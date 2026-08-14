@@ -538,7 +538,8 @@
         {
           name: '最大回撤',
           type: 'line', yAxisIndex: 1, data: dd, smooth: true, showSymbol: false, connectNulls: false,
-          lineStyle: { width: 1.8, color: '#334155' }, itemStyle: { color: '#334155' },
+          lineStyle: { opacity: 0 }, itemStyle: { color: '#334155' },
+          emphasis: { lineStyle: { opacity: 0 } },
           areaStyle: { color: 'rgba(51,65,85,0.18)' },
           markPoint: (() => {
             let minIdx = -1, minVal = 0;
