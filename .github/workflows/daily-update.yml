@@ -38,6 +38,7 @@ jobs:
           python make_charts.py
           python make_rebalance.py
           python update_html.py
+          python fetch_valuation.py
 
       - name: Commit and push
         run: |

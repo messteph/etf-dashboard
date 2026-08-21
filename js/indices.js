@@ -470,6 +470,7 @@
       comboCode = sel.value;
       comboZoomStart = 0; comboZoomEnd = 100;
       renderComboChart();
+      renderValuationChart();
     });
   }
 
@@ -566,9 +567,146 @@
     window.addEventListener('resize', () => comboChart && comboChart.resize());
   }
 
+  /* ---------- 指数估值 PE/PB (data/valuation.json, 乐咕源) ---------- */
+  let valuationData = null;       // { updated, series: { code: { pe: [{date,value}], pb: [...] } } }
+  let valuationMetric = 'pe';     // 'pe' | 'pb'
+  let valChart = null;
+  let valZoomStart = 0, valZoomEnd = 100;
+  const VAL_COLORS = { pe: '#0891b2', pb: '#b45309' };
+  const VAL_NAMES = { pe: '市盈率 PE', pb: '市净率 PB' };
+
+  /** 拉取估值 JSON (同源, sessionStorage 当日缓存) */
+  async function fetchValuation() {
+    const key = 'valuation_' + new Date().toISOString().slice(0, 10);
+    const cached = getSessionCache(key);
+    if (cached) { console.log('[indices] 估值数据使用会话缓存'); return cached; }
+    const resp = await fetch('data/valuation.json', { cache: 'no-store' });
+    if (!resp.ok) throw new Error('估值数据 HTTP ' + resp.status);
+    const data = await resp.json();
+    setSessionCache(key, data);
+    return data;
+  }
+
+  /** 分位值 (线性插值) 与当前值百分位 */
+  function percentileVal(sorted, p) {
+    if (!sorted.length) return null;
+    const pos = (p / 100) * (sorted.length - 1);
+    const lo = Math.floor(pos), hi = Math.ceil(pos);
+    if (lo === hi) return sorted[lo];
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+  }
+  function currentPercentile(values, cur) {
+    if (!values.length) return null;
+    const cnt = values.filter((v) => v <= cur).length;
+    return cnt / values.length * 100;
+  }
+
+  /** 渲染估值走势图: 跟随 combo-idx 选择, PE/PB 按钮切换 */
+  function renderValuationChart() {
+    const idx = INDICES.find((i) => i.code === comboCode);
+    const note = document.getElementById('valuation-note');
+    const el = document.getElementById('chart-valuation');
+    if (!idx || !el || !note) return;
+
+    const series = valuationData && valuationData.series[comboCode];
+    if (!valuationData || !series || !series[valuationMetric] || !series[valuationMetric].length) {
+      // 无数据: 清空图表并给出说明
+      if (valChart) { valChart.clear(); }
+      note.innerHTML = `<span class="hl">${idx.name}</span> 暂无历史估值数据（数据源：乐咕乐股，暂不覆盖该指数）`;
+      return;
+    }
+
+    const rows = series[valuationMetric];
+    const dates = rows.map((r) => r.date);
+    const values = rows.map((r) => r.value);
+    const cur = values[values.length - 1];
+    const sorted = values.slice().sort((a, b) => a - b);
+    const pct = currentPercentile(values, cur);
+    const QUANTILES = [10, 30, 50, 70, 90];
+    const qLines = QUANTILES.map((p) => {
+      const v = percentileVal(sorted, p);
+      return { yAxis: +v.toFixed(2), lineStyle: { color: '#94a3b8', type: 'dashed', width: 1, opacity: 0.9 },
+        label: { formatter: p + '%', color: '#64748b', fontSize: 10, position: 'insideEndTop' } };
+    });
+
+    if (!valChart) valChart = echarts.init(el);
+    valChart.setOption({
+      title: {
+        text: `${idx.name} ${VAL_NAMES[valuationMetric]} 走势（虚线为历史分位）`,
+        left: 4, top: 2, textStyle: { fontSize: 14, fontWeight: 'bold', color: '#1e293b' },
+      },
+      tooltip: {
+        trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.96)', borderColor: '#e2e8f0',
+        textStyle: { color: '#1e293b', fontSize: 12 }, axisPointer: { type: 'cross' },
+        valueFormatter: (v) => (v == null ? '-' : v.toFixed(2)),
+      },
+      grid: { left: 60, right: 24, top: 44, bottom: 70 },
+      xAxis: {
+        type: 'category', data: dates, boundaryGap: false,
+        axisLine: { lineStyle: { color: '#e8ecf1' } },
+        axisLabel: { color: '#64748b', fontSize: 10 }, axisTick: { show: false },
+      },
+      yAxis: {
+        type: 'value', scale: true,
+        splitLine: { lineStyle: { color: '#e8ecf1' } },
+        axisLabel: { color: '#64748b', fontSize: 10, formatter: (v) => v.toFixed(1) },
+      },
+      dataZoom: [
+        { type: 'inside', start: valZoomStart, end: valZoomEnd, zoomOnMouseWheel: true, moveOnMouseMove: true },
+        { type: 'slider', start: valZoomStart, end: valZoomEnd, bottom: 10, height: 22,
+          borderColor: '#e2e8f0', fillerColor: 'rgba(59,130,246,0.12)',
+          handleStyle: { color: '#3b82f6' }, textStyle: { color: '#64748b', fontSize: 10 },
+          dataBackground: { lineStyle: { color: '#cbd5e1' }, areaStyle: { color: '#eef2f7' } } },
+      ],
+      series: [{
+        name: VAL_NAMES[valuationMetric],
+        type: 'line', data: values, smooth: true, showSymbol: false, connectNulls: false,
+        lineStyle: { width: 2.2, color: VAL_COLORS[valuationMetric] },
+        itemStyle: { color: VAL_COLORS[valuationMetric] },
+        areaStyle: {
+          color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [{ offset: 0, color: VAL_COLORS[valuationMetric] + '2e' }, { offset: 1, color: VAL_COLORS[valuationMetric] + '05' }] },
+        },
+        markLine: {
+          silent: true, symbol: 'none', data: qLines,
+        },
+      }],
+    });
+
+    valChart.on('datazoom', () => {
+      const dz = valChart.getOption().dataZoom[0];
+      valZoomStart = dz.start != null ? dz.start : 0;
+      valZoomEnd = dz.end != null ? dz.end : 100;
+    });
+    window.addEventListener('resize', () => valChart && valChart.resize());
+
+    // 估值说明: 当前值 + 当前百分位 + 数据范围
+    const rangeStart = dates[0], rangeEnd = dates[dates.length - 1];
+    const level = pct < 30 ? '低估区间' : (pct > 70 ? '高估区间' : '合理区间');
+    note.innerHTML =
+      `<span class="hl">${idx.name}</span> 当前 ${VAL_NAMES[valuationMetric]} = <span class="hl">${cur.toFixed(2)}</span>` +
+      `，处于历史 <span class="hl">${pct.toFixed(1)}%</span> 分位（${level}）· 数据区间 ${rangeStart} ~ ${rangeEnd}`;
+  }
+
+  /** 初始化 PE/PB 切换按钮 */
+  function initMetricButtons() {
+    const btnPe = document.getElementById('metric-pe');
+    const btnPb = document.getElementById('metric-pb');
+    if (!btnPe || !btnPb) return;
+    const setActive = (m) => {
+      valuationMetric = m;
+      btnPe.classList.toggle('active', m === 'pe');
+      btnPb.classList.toggle('active', m === 'pb');
+      valZoomStart = 0; valZoomEnd = 100;
+      renderValuationChart();
+    };
+    btnPe.addEventListener('click', () => setActive('pe'));
+    btnPb.addEventListener('click', () => setActive('pb'));
+  }
+
   /* ---------- 图表加载状态: 数据未就绪时显示"数据加载中" ---------- */
   function setChartLoading(on) {
-    ['chart', 'chart-norm', 'chart-rel', 'chart-combo'].forEach((id) => {
+    ['chart', 'chart-norm', 'chart-rel', 'chart-combo', 'chart-valuation'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.classList.toggle('loading', on);
     });
@@ -655,6 +793,16 @@
       renderRelChart();
       initComboPicker();
       renderComboChart();
+      // 估值数据 (独立 JSON, 与指数数据并行; 失败不阻塞其他图表)
+      initMetricButtons();
+      try {
+        valuationData = await fetchValuation();
+      } catch (e) {
+        console.warn('[indices] 估值数据加载失败:', e.message);
+        const note = document.getElementById('valuation-note');
+        if (note) note.textContent = '估值数据加载失败，请稍后刷新重试';
+      }
+      renderValuationChart();
       // 数据就绪, 移除"数据加载中"提示
       setChartLoading(false);
     } catch (e) {

@@ -45,7 +45,7 @@
   #chart { width: 100%; height: 480px; position: relative; }
 
   /* 数据加载中提示 */
-  #chart.loading::after, #chart-norm.loading::after, #chart-rel.loading::after, #chart-combo.loading::after {
+  #chart.loading::after, #chart-norm.loading::after, #chart-rel.loading::after, #chart-combo.loading::after, #chart-valuation.loading::after {
     content: '⏳ 数据加载中…';
     position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
@@ -69,6 +69,22 @@
   #chart-rel { width: 100%; height: 420px; position: relative; }
   #chart-norm { width: 100%; height: 440px; position: relative; }
   #chart-combo { width: 100%; height: 420px; position: relative; }
+  #chart-valuation { width: 100%; height: 420px; position: relative; }
+
+  /* 估值指标切换按钮 */
+  .metric-btn {
+    padding: 6px 20px; font-size: 13px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--border); border-radius: 999px; background: #fff;
+    color: var(--sub); transition: all .2s;
+  }
+  .metric-btn:hover { border-color: #cbd5e1; color: var(--text); }
+  .metric-btn.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+
+  .valuation-note {
+    margin-top: 12px; font-size: 13px; color: #334155; text-align: center;
+    background: #f8fafc; border: 1px dashed #d7dee8; border-radius: 8px; padding: 8px 12px;
+  }
+  .valuation-note .hl { font-weight: 800; color: #0f172a; }
 
   .zoom-hint {
     margin-top: 10px; font-size: 12px; color: var(--sub); text-align: center;
@@ -157,6 +173,19 @@
     </div>
     <div id="chart-combo"></div>
     <div class="zoom-hint">🖱 拖动底部滑块或滚轮缩放 · 走势与回撤同步展示，回撤为水下曲线</div>
+  </div>
+
+  <!-- 指数估值 PE/PB -->
+  <div class="chart-card">
+    <div class="picker">
+      <span class="picker-label">估值指标</span>
+      <button class="metric-btn active" id="metric-pe">市盈率 PE</button>
+      <button class="metric-btn" id="metric-pb">市净率 PB</button>
+      <span class="picker-hint">虚线为历史 10% / 30% / 50% / 70% / 90% 分位</span>
+    </div>
+    <div id="chart-valuation"></div>
+    <div class="valuation-note" id="valuation-note">估值数据加载中…</div>
+    <div class="zoom-hint">🖱 拖动底部滑块或滚轮缩放 · 分位基于乐咕乐股全历史数据计算</div>
   </div>
 
   <!-- 双指数相对走势 -->
