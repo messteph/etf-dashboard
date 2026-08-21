@@ -89,7 +89,7 @@
     if (pfx) restoreTableBackup(pfx);
     const banner = document.getElementById('live-banner');
     if (banner) {
-      banner.textContent = '⚠ 实时数据加载失败，当前显示静态缓存图（数据截至每日 16:00 更新）';
+      banner.textContent = '⚠ 实时数据加载失败，当前显示静态缓存图（数据截至每周五 19:00 更新）';
       banner.style.display = 'block';
     }
   }
