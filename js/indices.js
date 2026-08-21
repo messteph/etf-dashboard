@@ -601,7 +601,7 @@
     return cnt / values.length * 100;
   }
 
-  /** 渲染估值走势图: 跟随 combo-idx 选择, PE/PB 按钮切换 */
+  /** 渲染估值走势图: 跟随 combo-idx 选择, PE/PB 按钮切换, 显示近 5 年 */
   function renderValuationChart() {
     const idx = INDICES.find((i) => i.code === comboCode);
     const note = document.getElementById('valuation-note');
@@ -616,7 +616,17 @@
       return;
     }
 
-    const rows = series[valuationMetric];
+    // 近 5 年截取 (数据源保持全历史, 展示口径为近 5 年)
+    const now5 = new Date();
+    now5.setFullYear(now5.getFullYear() - 5);
+    const cutoff = now5.getFullYear() + '-' + String(now5.getMonth() + 1).padStart(2, '0') + '-' + String(now5.getDate()).padStart(2, '0');
+    const rows = series[valuationMetric].filter((r) => r.date >= cutoff);
+    if (!rows.length) {
+      if (valChart) { valChart.clear(); }
+      note.innerHTML = `<span class="hl">${idx.name}</span> 近 5 年无估值数据`;
+      return;
+    }
+
     const dates = rows.map((r) => r.date);
     const values = rows.map((r) => r.value);
     const cur = values[values.length - 1];
@@ -632,7 +642,7 @@
     if (!valChart) valChart = echarts.init(el);
     valChart.setOption({
       title: {
-        text: `${idx.name} ${VAL_NAMES[valuationMetric]} 走势（虚线为历史分位）`,
+        text: `${idx.name} ${VAL_NAMES[valuationMetric]} 走势（近 5 年，虚线为历史分位）`,
         left: 4, top: 2, textStyle: { fontSize: 14, fontWeight: 'bold', color: '#1e293b' },
       },
       tooltip: {
@@ -680,12 +690,12 @@
     });
     window.addEventListener('resize', () => valChart && valChart.resize());
 
-    // 估值说明: 当前值 + 当前百分位 + 数据范围
+    // 估值说明: 当前值 + 当前百分位 + 数据范围 (近 5 年口径)
     const rangeStart = dates[0], rangeEnd = dates[dates.length - 1];
     const level = pct < 30 ? '低估区间' : (pct > 70 ? '高估区间' : '合理区间');
     note.innerHTML =
       `<span class="hl">${idx.name}</span> 当前 ${VAL_NAMES[valuationMetric]} = <span class="hl">${cur.toFixed(2)}</span>` +
-      `，处于历史 <span class="hl">${pct.toFixed(1)}%</span> 分位（${level}）· 数据区间 ${rangeStart} ~ ${rangeEnd}`;
+      `，处于近 5 年历史 <span class="hl">${pct.toFixed(1)}%</span> 分位（${level}）· 数据区间 ${rangeStart} ~ ${rangeEnd}`;
   }
 
   /** 初始化 PE/PB 切换按钮 */
